@@ -1,4 +1,3 @@
-import pyshark
 import datetime
 import os
 import requests
@@ -6,6 +5,14 @@ import logging
 from src import config
 
 logger = logging.getLogger("alertBot.pcap")
+
+try:
+    import pyshark
+except ImportError as ie:
+    logger.error("Package pyshark is not installed", ie)
+    raise
+
+
 
 # WINDOWS edit config.ini to change thark.exe path
 # located in ..site-packages\pyshark
