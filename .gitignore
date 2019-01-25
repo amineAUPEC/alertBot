@@ -102,3 +102,12 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Pipenv stuff
+Pipfile.lock
+
+# General stuff
+*.sh
+config.json
+filter.json
+test/
