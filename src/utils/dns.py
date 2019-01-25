@@ -8,18 +8,19 @@ logger = logging.getLogger("alertBot.dns")
 def get_hostname(ip: str):
     try:
         dns = socket.gethostbyaddr(ip)
-        if dns:
-            try:
-                if IPAddress(ip) in (IPNetwork("192.168.0.0/16") or IPNetwork("10.0.0.0/8") or IPNetwork("172.16.0.0/12")):
-                    logger.debug("filter match func 'ip_in_cidr_range()'")
-                    return dns[0].split(".")[0]
-                else:
-                    return dns[0]
-            except AddrFormatError as e:
-                logger.exception(msg=f"Error parsing receiving IP. Is {ip} an IP?", exc_info=True)
-                raise e
+        if not dns:
+            return None
+
+        try:
+            if IPAddress(ip) in (IPNetwork("192.168.0.0/16") or IPNetwork("10.0.0.0/8") or IPNetwork("172.16.0.0/12")):
+                logger.debug("filter match func 'ip_in_cidr_range()'")
+                return dns[0].split(".")[0]
+            else:
+                return dns[0]
+        except AddrFormatError as e:
+            logger.exception(msg=f"Error parsing receiving IP. Is {ip} an IP?", exc_info=True)
+            raise e
 
     except socket.herror as e:
         logger.warning("No DNS found for %s\n%s", ip, e)
         return None
-
