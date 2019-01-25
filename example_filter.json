@@ -1,0 +1,67 @@
+[
+  {
+    "filterName": "rep sigs",
+    "rules": [
+      {
+        "func": "contains",
+        "value": "ET CINS Active Threat",
+        "field": "name"
+      },
+      {
+        "func": "contains",
+        "value": "ET DROP Dshield Block Listed",
+        "field": "name"
+      },
+      {
+        "func": "ip not in cidr",
+        "value": "192.168.0.0/16",
+        "field": "src"
+      }
+    ]
+  },
+  {
+    "filterName": "noisy sigs",
+    "rules": [
+      {
+        "func": "contains",
+        "value": "D-Link",
+        "field": "name"
+      },
+	  {
+        "func": "contains",
+        "value": "DSL",
+        "field": "name"
+      },
+	  {
+        "func": "contains",
+        "value": "IIS",
+        "field": "name"
+      },
+      {
+        "func": "contains",
+        "value": "OpenSSL SSLv3",
+        "field": "name"
+      },
+	  {
+		"func": "contains",
+		"value": "ET EXPLOIT HackingTrio UA (Hello, World)",
+		"field": "name"
+	  },
+	  {
+		"func": "contains",
+		"value": "(http_inspect) POST W/O CONTENT-LENGTH OR CHUNKS",
+		"field": "name"
+	  },
+      {
+		"func": "contains",
+		"value": "ET SCAN MS Terminal Server Traffic on Non-standard Port",
+		"field": "name"
+	  },
+	  {
+        "func": "ip not in cidr",
+        "value": "192.168.0.0/16",
+        "field": "src"
+      }
+    ]
+  }
+]

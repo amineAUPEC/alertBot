@@ -1,0 +1,51 @@
+{
+  "logging": {
+    "level": "info"
+  },
+  "filter": {
+    "enabled": true,
+    "path": "filter.json"
+  },
+  "sensors": {
+    "snort": {
+      "enabled": true,
+      "filePath": "path/to/alertFile",
+      "logType": "full",
+      "interface": "LAN"
+    },
+    "suricata": {
+      "enabled": false,
+      "filePath": "path/to/eve.json",
+      "logType": "evejson",
+      "interface": "WAN"
+    }
+  },
+  "notify": {
+    "enabled": true,
+    "blackListedFields": ["rev", "sid", "pri", "payload"],
+    "agents": [
+            {
+                "name": "telegram",
+                "enabled": true,
+                "token": "TOKEN",
+                "chat_id": 99999999
+            },
+            {
+                "name": "discord",
+                "enabled": false,
+                "webhookUrl": "webhook url"
+            },
+            {
+              "name": "webhook",
+              "enabled": false,
+              "url": "webhook url",
+              "destinations": {"telegram": ["anna"], "discord": ["alerts"]}
+            }
+        ]
+  },
+  "pcapParser": {
+    "enabled": false,
+    "pcapGenUrl": "pcapGenUrl",
+    "pcapDir": "pcapDir"
+  }
+}
