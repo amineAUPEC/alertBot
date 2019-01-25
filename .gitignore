@@ -111,3 +111,4 @@ Pipfile.lock
 config.json
 filter.json
 test/
+.idea/
