@@ -12,7 +12,8 @@ class Snort:
     def __init__(self):
         self.pattern = re.compile(
             r"(?P<time>\d+\/\d+\/\d+-\d+:\d+:\d+\.\d+)\s,"  # time
-            r"(?P<sid>\d+,\d+),"                            # Signature SID
+            r"(?P<gid>\d+),"                                # Signature GID
+            r"(?P<sid>\d+),"                                # Signature SID
             r"(?P<rev>\d+),"                                # Revision - ??
             r"\"(?P<name>.*?)\","                           # Alert name
             r"(?P<proto>TCP|UDP|ICMP|.?),"                  # Protocol
