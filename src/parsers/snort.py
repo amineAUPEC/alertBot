@@ -1,13 +1,14 @@
 import re
 import logging
-from src import SendNotification
+from src.notify import SendNotification
 
 logger = logging.getLogger("alertBot.snort")
 
 
 class Snort:
     """ Using class BC patterns should only be compiled once..
-        And all snort parsers and patterns can be found at one place
+        And all snort parsers and patterns can be found at one place.
+        Parsers not tested for SnortV3
     """
     def __init__(self):
         self.pattern = re.compile(
@@ -26,7 +27,7 @@ class Snort:
             r"(?P<pri>\d+)"                                 # Priority
         )
 
-    def snortParserV2(self, line: str) -> dict:
+    def full_log(self, line: str) -> dict:
         # Parse snort version 2 alerts/logs
 
         try:
@@ -48,6 +49,5 @@ class Snort:
             logger.error(rexerror)
             exit(1)
 
-    def snortParserV3(self, line):
-        # Parse snort version 3 alerts/logs
+    def fast_log(self):
         pass

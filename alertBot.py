@@ -68,14 +68,15 @@ if config.filter.enabled:
     if not os.path.isfile("filter.json"):
         logger.warning("filter.json do not exist")
 
-        exit("Filter is enabled but does not exist.. Create file filter.json")
+        exit("Filter is enabled but does not exist.. Create file 'filter.json'")
 
     with open(config.filter.path, encoding="utf-8") as f:
         try:
             filter_list = json.load(f)
         except json.decoder.JSONDecodeError as je:
             logger.error("Error in 'filter.json' -> %s", je)
-            logger.exception(msg="Must escape 'escape' chars in regex in 'filter.json' bc json... Usually solved by '\\\\'", exc_info=je)
+            logger.exception(msg="Must escape 'escape' chars in regex in 'filter.json' bc json... "
+                                 "Usually solved by '\\\\'", exc_info=je)
             exit(1)
 
     alert_filter = AlertFilter(filter_list)
@@ -88,7 +89,8 @@ if isNotify_enabled:
 parsers = {
     "snort": {
         "logType": {
-            "full": Snort().snortParserV2
+            "full": Snort().full_log,
+            "fast": Snort().fast_log
         }
     },
     "suricata": {
