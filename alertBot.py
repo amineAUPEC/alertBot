@@ -6,12 +6,12 @@ import logging
 import datetime
 
 from src import config
-from src import Suricata
-from src import Snort
-from src import SendNotification
-from src import AlertFilter
+from src.parsers import Suricata, Snort
+from src.notify import SendNotification
+from src.filtering import AlertFilter
 from src.pcap.alertPcap import get_alert_pcap
-from src.pcap.utils.dns import get_hostname
+from src.utils.dns import get_hostname
+
 log_level = {
     "info": logging.INFO,
     "warn": logging.WARN,

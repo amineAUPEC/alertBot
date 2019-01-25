@@ -14,7 +14,3 @@ with open(config_file, "r") as cfg:
 # Validate config?...
 config = munch.munchify(config)
 
-from .filtering.filter_alerts import AlertFilter
-from .notify.notify import SendNotification
-from .parsers.suricata import Suricata
-from .parsers.snort import Snort
