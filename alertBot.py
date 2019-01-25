@@ -104,13 +104,23 @@ parsers = {
 
 
 def get_enabled_sensor():
+    enabled_count = 0
+    selected_sensor = None
     for sensor in config.sensors:
         if config.sensors[sensor].enabled:
+            enabled_count += 1
             config.sensors[sensor]["sensorType"] = sensor
-            return config.sensors[sensor]
+            selected_sensor = config.sensors[sensor]
 
-    logger.error("No sensors is enabled.. Plz enable ONE!")
-    exit(1)
+    if not selected_sensor:
+        logger.error("No sensors is enabled.. Plz enable ONE!")
+        exit(1)
+
+    if enabled_count > 1:
+        logger.error("More than one sensor enabled! Only one can be enabled")
+        exit(1)
+
+    return selected_sensor
 
 
 # Get the enabled sensor
@@ -119,8 +129,8 @@ enabled_sensor_cfg = get_enabled_sensor()
 
 def get_logfile_state(filepath) -> dict:
     # Get all file states..
-    with open(filepath) as file:
-        state = json.load(file)
+    with open(filepath) as _f:
+        state = json.load(_f)
 
     return state
 
