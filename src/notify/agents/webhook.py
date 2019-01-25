@@ -1,4 +1,4 @@
-from src.notify.notify import NotifyInterface
+from src.abstraction.interface import IFaceNotify
 import logging
 import requests
 import requests.packages.urllib3
@@ -7,12 +7,12 @@ requests.packages.urllib3.disable_warnings()
 logger = logging.getLogger("alertBot.webhook")
 
 
-class Webhook(NotifyInterface):
+class Webhook(IFaceNotify):
     def __init__(self, config):
         self.dest = config.destinations
         self.url = config.url
 
-    def sendalert(self, msg, title):
+    def send_alert(self, msg, title):
         payload = {
             "destinations": self.dest,
             "message": msg,

@@ -1,4 +1,4 @@
-from src.notify.notify import NotifyInterface
+from src.abstraction.interface import IFaceNotify
 import logging
 import requests
 import requests.packages.urllib3
@@ -7,7 +7,7 @@ requests.packages.urllib3.disable_warnings()
 logger = logging.getLogger("alertBot.telegram")
 
 
-class Telegram(NotifyInterface):
+class Telegram(IFaceNotify):
     '''Telegram notification class'''
 
     def __init__(self, config):
@@ -33,7 +33,7 @@ class Telegram(NotifyInterface):
 
         return True
 
-    def sendalert(self, msg, title):
+    def send_alert(self, msg, title):
         '''Uses the String representation of the message object to format the message'''
 
         # title = f"{title} Event\n"

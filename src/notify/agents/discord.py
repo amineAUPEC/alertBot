@@ -1,4 +1,4 @@
-from src.notify.notify import NotifyInterface
+from src.abstraction.interface import IFaceNotify
 import logging
 import requests
 import requests.packages.urllib3
@@ -8,7 +8,7 @@ requests.packages.urllib3.disable_warnings()
 logger = logging.getLogger("alertBot.discord")
 
 
-class Discord(NotifyInterface):
+class Discord(IFaceNotify):
     def __init__(self, config):
         self.URL = config.webhookUrl
         self.DATA = {}
@@ -26,7 +26,7 @@ class Discord(NotifyInterface):
         else:
             logging.error("Error on Discord post message: ", result.content)
 
-    def sendalert(self, msg, title):
+    def send_alert(self, msg, title):
         # Set the username of the discord post and format message
         msg_maxlen = 2000
         if len(msg) >= msg_maxlen:  # max allowed lenght

@@ -1,49 +1,11 @@
-from abc import ABCMeta, abstractmethod
+from src.abstraction.interface import IFaceNotify
 import logging
 from src import config
 
 logger = logging.getLogger("alertBot.notify")
 
 
-class NotifyModel:
-    ''' Not in use! '''
-    interface = None
-    alertname = None
-    src = None
-    src_p = None
-    dst = None
-    dst_p = None
-    proto = None
-    class_name = None
-    alert_time = None
-
-    def __str__(self):
-        formatted = """Interface: %s
-Name: %s
-Src: %s
-Src_p: %s
-Dst: %s
-Dst_p: %s
-Proto: %s
-Class: %s
-Time: %s
-        """ % (self.interface, self.alertname, self.src, self.src_p,
-               self.dst, self.dst_p, self.proto,
-               self.class_name, self.alert_time)
-        return formatted
-
-
-class NotifyInterface:
-    __metaclass__ = ABCMeta
-    '''Interface for sending notifications'''
-
-    @abstractmethod
-    def sendalert(self, msg, title):
-        '''Send notification on grabbed nzb for a job'''
-        raise NotImplemented
-
-
-class Notify(NotifyInterface):
+class Notify(IFaceNotify):
     '''
     Bridge for all notification agents
     Actual class to be used when sending a notification
@@ -53,12 +15,12 @@ class Notify(NotifyInterface):
         # Register all agent classes from DownloadClientInterface
         self.config = config
         self._NOTIFY_AGENTS = {}
-        for cls in NotifyInterface.__subclasses__():
+        for cls in IFaceNotify.__subclasses__():
             self._NOTIFY_AGENTS[cls.__name__.lower()] = cls
         self.agent = self._NOTIFY_AGENTS[agent_name.lower()](config)
 
-    def sendalert(self, msg, title):
-        return self.agent.sendalert(msg, title)
+    def send_alert(self, msg, title):
+        return self.agent.send_alert(msg, title)
 
 
 class SendNotification:
@@ -93,7 +55,7 @@ class SendNotification:
         for agent in agents:
             agentConf = self.getNotifyConfig(agent.name)
 
-            if Notify(agent_name=agent.name, config=agentConf).sendalert(message, title):
+            if Notify(agent_name=agent.name, config=agentConf).send_alert(message, title):
                 logger.info("Sent notification to %s", agent.name)
             else:
                 logger.warning("Notification was not sent to %s", agent.name)
