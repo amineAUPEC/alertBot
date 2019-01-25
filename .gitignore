@@ -106,8 +106,9 @@ venv.bak/
 # Pipenv stuff
 Pipfile.lock
 
-# General stuff
+# alert bot related stuff
 *.sh
+fileState.json
 config.json
 filter.json
 test/
