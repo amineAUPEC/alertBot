@@ -82,6 +82,7 @@ class AlertFilter:
             raise
 
     def run_filter(self, alert: munch.Munch) -> bool:
+        """ 200 iq function """
         if not isinstance(alert, munch.Munch):
             alert = munch.munchify(alert)
 
@@ -97,32 +98,29 @@ class AlertFilter:
             for rule in _filter.rules:
                 try:
                     # Mapping filter rules to actual functions and exec (value, field)
-                    # if self.filter_funcs[rule.func](str(rule.value).lower(), str(alert[rule.field]).lower()):
                     if self.filter_funcs[rule.func](rule.value, alert[rule.field]):
-                        # this specific filter rule returned true.
-                        # All filters in rule->[] must be true to actually filter the alert,
+                        # This specific filter rule returned true.
+                        # All filters in rule->[] must be True to actually filter the alert,
                         # except if a field is used multiple times
 
-                        # This stats counter only count when each filter function returns true
+                        # This stats counter only count when each filter function returns True
                         # and do not have relation to "filter = true"
                         tmp_stats[rule.func] = tmp_stats.get(rule.func, 0) + 1
                         self.filter_func_true_stats[rule.func] = self.filter_func_true_stats.get(rule.func, 0) + 1
                         true_counter += 1
                 except IndexError:
-                    logger.exception(msg="IndexError in 'filter_funcs[rule.func]' or 'alert[rule.field]'",
-                                     exc_info=True)
                     logger.critical(
                         "IndexError in 'filter_funcs[rule.func]' or 'alert[rule.field]'")
+                    logger.exception(msg="IndexError in 'filter_funcs[rule.func]' or 'alert[rule.field]'",
+                                     exc_info=True)
                     exit(1)
 
-            # if len_filter == true_counter: OLD
-            # if true_counter >= len_truth:
             if len_truth <= true_counter <= len_filter:
-                # This check allows 'implicit OR' when a multiple of the same field
-                # is used in the same filter. Ex field 'name' is used multiple times in rules->[].
-                # Proly better to use something like "true_counter in range(len_truth, len_filter)"
+                # This check allows 'implicit OR' when a multiple of the same field is used in the same filter.
+                # Ex field 'name' is used multiple times in rules->[].
+                # Prolly better to use something like "if true_counter in range(len_truth, len_filter)"
 
-                # All filters in rules->[] returned true aka filtering this alert
+                # Enough filter criteria's in rules->[] returned True aka filtering this alert.
                 logger.info(f"Filtering alert '{alert.name}' with filter '{_filter.name}'")
 
                 # Log stats for filter name
@@ -133,7 +131,7 @@ class AlertFilter:
                     self.filter_func_stats[func_name] = self.filter_func_stats.get(func_name, 0) + func_val
                 return True
 
-        # No filters fully matched.. aka this alert should not be filtered..
+        # Not enough filter criteria's matched.. aka this alert should not be filtered..
         logger.info(f"No filter matched for alert '{alert.name}'. NOT filtering")
         return False
 
@@ -166,17 +164,7 @@ def regex_filter(compiled_pattern, field: str) -> bool:
         return True
 
     logger.debug(f"no 'regex_filter()' match for value {compiled_pattern} on field {field}")
-    # return False
-    # try:
-    #     regex = re.compile(value)
-    #     if regex.search(field):
-    #         logger.debug("filter match func 'regex_filter()'")
-    #         return True
-    # except re.error as reError:
-    #     logger.critical(reError)
-    #
-    # logger.debug(f"no 'regex_filter()' match for value {value} on field {field}")
-    # return False
+    return False
 AlertFilter.filter_funcs["regex"] = regex_filter
 
 
@@ -201,8 +189,7 @@ AlertFilter.filter_funcs["not exactly"] = exactly
 
 
 def ip_in_cidr_range(value: str, field: str) -> bool:
-    #print("value", value)
-    #print("field", field)
+
     # ip_in_cidr_range_filter(CIDR ex 192.168.1.0/24, ip.addr)
     try:
         if IPAddress(field) in IPNetwork(value):
@@ -212,16 +199,16 @@ def ip_in_cidr_range(value: str, field: str) -> bool:
         logger.exception(msg=f"Is filter value '{value}' or field '{field}' a valid IP address?", exc_info=True)
         return False
 
-    logger.debug("no 'ip_in_cidr_range()' match for value {value} on field {field}")
+    logger.debug(f"no 'ip_in_cidr_range()' match for value {value} on field {field}")
     return False
 AlertFilter.filter_funcs["ip in cidr"] = ip_in_cidr_range
 
 
 def ip_not_in_cidr_range(value: str, field: str) -> bool:
     if ip_in_cidr_range(value, field):
-        # ip is in CIDR
+        # ip is in CIDR aka return False
         return False
-    # IP is not in CIDR
+    # IP is not in CIDR aka return True
     logger.debug("filter match func 'ip_not_in_cidr_range()'")
     return True
 AlertFilter.filter_funcs["ip not in cidr"] = ip_not_in_cidr_range
@@ -240,58 +227,3 @@ def ends_with(value: str, field: str) -> bool:
     return False
 AlertFilter.filter_funcs["endswith"] = ends_with
 
-
-'''
-filter_list = [
-    {
-        "name": "something",
-        "rules": [
-            {
-                "func": "contains",
-                "value": "INDICATOR-COMPROMISE",
-                "field": "name"
-            },
-            {
-                "func": "ip in cidr",
-                "value": "192.168.1.0/24",
-                "field": "src"
-            },
-            {
-                "func": "must not exactly",
-                "value": "80",
-                "field": "dst_p"
-            }
-        ]
-    },
-    {
-        "name": "other",
-        "rules": [
-            {
-                "func": "must contain",
-                "value": "INDICATOR-COMPROMISE",
-                "field": "name"
-            }
-        ]
-    },
-    {
-        "name": "otherfilter",
-        "rules": [
-            {
-                "func": "must contain",
-                "value": "dns",
-                "field": "name"
-            },
-            {
-                "func": "must contain",
-                "value": "192.168.1.15",
-                "field": "src"
-            },
-            {
-                "func": "regex",
-                "value": "\.pwee",
-                "field": "name"
-            }
-        ]
-    }
-]
-'''
