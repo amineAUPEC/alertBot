@@ -1,6 +1,11 @@
 {
+  "general": {
+    "reverseDns": false
+  },
   "logging": {
-    "level": "info"
+    "level": "info",
+    "logSize": 3000000,
+    "backupCount": 3
   },
   "filter": {
     "enabled": true,
@@ -8,21 +13,22 @@
   },
   "sensors": {
     "snort": {
-      "enabled": true,
+      "enabled": false,
       "filePath": "path/to/alertFile",
       "logType": "full",
       "interface": "LAN"
     },
     "suricata": {
-      "enabled": false,
+      "enabled": true,
       "filePath": "path/to/eve.json",
-      "logType": "evejson",
+      "logType": "eve",
       "interface": "WAN"
     }
   },
   "notify": {
     "enabled": true,
-    "blackListedFields": ["rev", "sid", "pri", "payload"],
+    "startUpAlert": false,
+    "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload"],
     "agents": [
             {
                 "name": "telegram",
