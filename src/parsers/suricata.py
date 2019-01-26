@@ -29,18 +29,23 @@ class Suricata:
             r"(?P<proto>TCP|UDP|ICMP|.?),"  # Protocol
             r"(?P<src>\d+\.\d+\.\d+\.\d+),"  # Src IP
             r"(?P<src_port>\d+|.?),"  # Src port
-            r"(?P<dst>\d+\.\d+\.\d+\.\d+),"  # Dst IP
-            r"(?P<dst_port>\d+|.?),"  # Dst port
+            r"(?P<dest>\d+\.\d+\.\d+\.\d+),"  # Dst IP
+            r"(?P<dest_port>\d+|.?),"  # Dst port
             r"\d+,"  # Unknown stuff
             r"(?P<class>[a-zA-Z0-9-_ ]+),"  # Alert class
             r"(?P<pri>\d+)"  # Priority
         )
         self._pattern_fast = re.compile(
             r"(?P<time>\d{2}\/\d{2}\/\d{4}-\d{2}:\d{2}:\d{2}\.\d+)\s+"
-            r"\[\*\*\]\s+\[\d+:(?P<sid>\d+):(?P<revision>\d+)\] "
+            r"\[\*\*\]\s+\[\d+:"
+            r"(?P<sid>\d+):"
+            r"(?P<revision>\d+)\] "
             r"(?P<name>.+) \[\*\*\]\s+(\[Classification: (?P<classtype>.+)\] )?"
             r"\[Priority: (?P<priority>\d+)\] \{(?P<protocol>[:a-zA-Z0-9_-]+)\} "
-            r"(?P<src>.+) \-\> (?P<dest>.+)"
+            r"(?P<src>\d+\.\d+\.\d+\.\d+)\:"
+            r"(?P<src_port>\d+|.?) \-\> "
+            r"(?P<dest>\d+\.\d+\.\d+\.\d+)\:"
+            r"(?P<dest_port>\d+|.?)"
         )
 
     def eve_json(self, line: str):

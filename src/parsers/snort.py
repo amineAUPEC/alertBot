@@ -39,10 +39,15 @@ class Snort:
 
         self._pattern_fast = re.compile(
             r"(?P<time>\d{2}\/\d{2}\/\d{4}-\d{2}:\d{2}:\d{2}\.\d+)\s+"
-            r"\[\*\*\]\s+\[\d+:(?P<sid>\d+):(?P<revision>\d+)\] "
+            r"\[\*\*\]\s+\[\d+:"
+            r"(?P<sid>\d+):"
+            r"(?P<revision>\d+)\] "
             r"(?P<name>.+) \[\*\*\]\s+(\[Classification: (?P<classtype>.+)\] )?"
             r"\[Priority: (?P<priority>\d+)\] \{(?P<protocol>[:a-zA-Z0-9_-]+)\} "
-            r"(?P<src>.+) \-\> (?P<dest>.+)"
+            r"(?P<src>\d+\.\d+\.\d+\.\d+)\:"
+            r"(?P<src_port>\d+|.?) \-\> "
+            r"(?P<dest>\d+\.\d+\.\d+\.\d+)\:"
+            r"(?P<dest_port>\d+|.?)"
         )
 
     def full_log(self, line: str) -> dict:
