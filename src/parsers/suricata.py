@@ -114,7 +114,7 @@ class Suricata:
                 if self.isNotify_enabled:
                     Notification().send_notification(
                         message="No match for line. This should not happen..\n{}".format(line),
-                        title="Snort Parser Error"
+                        title="Suricata fast_log Parser Error"
                     )
 
                 return {}
