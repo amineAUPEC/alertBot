@@ -2,11 +2,10 @@ import socket
 import logging
 from netaddr import IPNetwork, IPAddress, AddrFormatError
 
-logger = logging.getLogger("alertBot.dns")
-
 
 def get_hostname(ip: str):
     """ Reverse DNS """
+    logger = logging.getLogger("alertBot.utils")
     try:
         dns = socket.gethostbyaddr(ip)
         if not dns:
@@ -25,3 +24,14 @@ def get_hostname(ip: str):
     except socket.herror as e:
         logger.warning("No DNS found for %s. %s", ip, e)
         return None
+
+
+def url_sanitizer(url: str) -> str:
+    logger = logging.getLogger("alertBot.url_sanitizer")
+    logger.debug("URl before sanitizing: %s", url)
+    sanitized_url = url.replace("http", "hxxp").replace("https", "hxxps").replace(".", "[.]")
+    logger.debug("URl after sanitizing: %s", sanitized_url)
+    return sanitized_url
+
+
+#print(url_sanitizer("https://www.vg.no"))
