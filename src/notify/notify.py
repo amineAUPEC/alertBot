@@ -23,7 +23,7 @@ class Notify(IFaceNotify):
         return self.agent.send_alert(msg, title)
 
 
-class SendNotification:
+class Notification:
     def __init__(self):
         self.config = config.notify
 
@@ -41,12 +41,12 @@ class SendNotification:
 
         return enabled
 
-    def getNotifyConfig(self, agentName):
+    def getNotifyConfig(self, agent_name):
         for agent in self.config.agents:
-            if agent.name == agentName:
+            if agent.name == agent_name:
                 return agent
 
-        logger.warning("No config for notify agent %s found", agentName)
+        logger.warning("No config for notify agent %s found", agent_name)
         return None
 
     def send_notification(self, message, title):

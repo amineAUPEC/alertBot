@@ -6,6 +6,5 @@ This makes imports more modular and less code when adding new agents
 
 src https://stackoverflow.com/a/1057534
 '''
-from src.notify.notify import SendNotification
+from src.notify.notify import Notification
 from src.notify.agents import *
-
