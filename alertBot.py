@@ -1,70 +1,94 @@
 import json
 import munch
 import os
+import sys
 import time
 import logging
-import datetime
+from logging import handlers
+# import threading
 
 from src import config
 from src.parsers import Suricata, Snort
-from src.notify import SendNotification
+from src.notify import Notification
 from src.filtering import AlertFilter
 from src.pcap.alertPcap import get_alert_pcap
-from src.utils.dns import get_hostname
+from src.misc.utils import get_hostname
 
-log_level = {
+# Logging
+set_loglevel = config.logging.level
+
+log_levels = {
     "info": logging.INFO,
     "warn": logging.WARN,
     "critical": logging.CRITICAL,
+    "error": logging.ERROR,
     "debug": logging.DEBUG
 }
 
-set_loglevel = config.logging.level
+if len(sys.argv) > 1:
+    try:
+        set_loglevel = sys.argv[1]
+    except KeyError as e:
+        print(e)
+        print("Not a valid log level!")
+        print(f"Valid log levels ars: \n{log_levels.keys()}")
+        exit(1)
+    except IndexError as IE:
+        pass
 
-# create logger
+print(f"Using Log Level '{set_loglevel}'")
+# Create logger
 logger = logging.getLogger("alertBot")
-logger.setLevel(log_level[set_loglevel])
+logger.setLevel(log_levels[set_loglevel])
 
-# create file handler which logs even debug messages
-fh = logging.FileHandler('alertBot.log')
-fh.setLevel(log_level[set_loglevel])
+# Setup log rotation
+log_size = config.logging.logSize  # 3000000  # 3 mb
+bck_count = config.logging.backupCount
+rotate_logs = logging.handlers.RotatingFileHandler(filename="alertBot.log", maxBytes=log_size, backupCount=bck_count)
+rotate_logs.setLevel(log_levels[set_loglevel])
 
-# create console handler with a higher log level
+# Create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(log_level[set_loglevel])
+ch.setLevel(log_levels[set_loglevel])
 
-# create formatter and add it to the handlers
+# Create formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y:%m:%d %H:%M:%S')
-fh.setFormatter(formatter)
+rotate_logs.setFormatter(formatter)
 ch.setFormatter(formatter)
 
-# add the handlers to the logger
-logger.addHandler(fh)
+# Add the handlers to the logger
+logger.addHandler(rotate_logs)
 logger.addHandler(ch)
 
-# file state for alerts
+# File state for alerts (global)
 state_file = "fileState.json"
 if not os.path.isfile(state_file) or os.path.getsize(state_file) == 0:
-    # Create file state with default values
-    # This is dirty and should be fixed..
+    # Create the file_state file with default values
     logger.info("fileState.json do not exist or is empty. Creating default..")
 
     default_state = {}
-    default_state["snort"] = {}
-    #default_state["snort"] = 0
-    default_state["snort"][config.sensors.snort.interface] = 0
-    default_state["suricata"] = {}
-    default_state["suricata"][config.sensors.suricata.interface] = 0
+    for _sensor in config["sensors"].keys():
+        default_state[_sensor] = {}
+        default_state[_sensor][config.sensors[_sensor].interface] = 0
+
     with open(state_file, "w") as file:
         json.dump(default_state, file)
 
-isFilter_enabled = False
+alert_filter = None  # AlertFilter cls
+filter_list = None  # JSON loaded filter list
+isFilter_enabled = config.filter.enabled
 isNotify_enabled = config.notify.enabled
+isNotifyOnStartUp_enabled = config.notify.notifyOnStartUp
+isPcapParser_enabled = config.pcapParser.enabled
+isReverseDNS_enabled = config.general.reverseDns
 
-if config.filter.enabled:
-    logger.info("Filter is enabled")
+logger.info(f"Reverse DNS is {isReverseDNS_enabled}")
+logger.info(f"Pcap Parser is {isPcapParser_enabled}")
+logger.info(f"Notification is {isNotify_enabled}")
+logger.info(f"Start up Alert is {isNotifyOnStartUp_enabled}")
+logger.info(f"Filter is {isFilter_enabled}")
 
-    isFilter_enabled = True
+if isFilter_enabled:
     if not os.path.isfile("filter.json"):
         logger.warning("filter.json do not exist")
 
@@ -83,32 +107,39 @@ if config.filter.enabled:
     alert_filter.validate_filter_list()
 
 if isNotify_enabled:
-    logger.info("Notification is enabled")
-    notify = SendNotification()
+    notify = Notification()
+    if isNotifyOnStartUp_enabled:
+        notify.send_notification(message="AlertBot started..", title="AlertBot")
 
+
+# parsers Dictionary holds all available parser classes and parser functions. Could be auto generated but meh.
 parsers = {
     "snort": {
+        "parser_cls": Snort,
         "logType": {
-            "full": Snort().full_log,
-            "fast": Snort().fast_log
+            "full": "full_log",  # The value is the name of the parser function in the parser class
+            "fast": "fast_log"
         }
     },
     "suricata": {
+        "parser_cls": Suricata,
         "logType": {
-            "evejson": Suricata().eve_json,
-            "fast": Suricata().fast_log,
-            "full": Suricata().full_log
+            "eve": "eve_json",  # The value is the name of the parser function in the parser class
+            "fast": "fast_log",
+            "full": "full_log"
         }
     }
 }
 
 
 def get_enabled_sensor():
+    """ Get the enabled sensor config """
     enabled_count = 0
     selected_sensor = None
     for sensor in config.sensors:
         if config.sensors[sensor].enabled:
             enabled_count += 1
+            # Creates a new key "sensorType" = sensor ex snort
             config.sensors[sensor]["sensorType"] = sensor
             selected_sensor = config.sensors[sensor]
 
@@ -123,48 +154,49 @@ def get_enabled_sensor():
     return selected_sensor
 
 
-# Get the enabled sensor
-enabled_sensor_cfg = get_enabled_sensor()
-
-
-def get_logfile_state(filepath) -> dict:
-    # Get all file states..
-    with open(filepath) as _f:
-        state = json.load(_f)
+def get_logfile_state() -> dict:
+    # Get last file position for log files.. 'state_file' is global
+    with open(state_file, "r") as s_file:
+        state = json.load(s_file)
 
     return state
 
 
 def save_logfile_state(new_state: int, sensor: str, interface: str):
-    # save current tracking of logfile
-    new_filestate = get_logfile_state(state_file)
-    # update file state
-    new_filestate[sensor][interface] = new_state
-    with open(state_file, "w") as file:
-        json.dump(new_filestate, file)
+    # Save current file position of logfile. 'state_file' is global
+    new_file_state = get_logfile_state()
+    # Update file state
+    new_file_state[sensor][interface] = new_state
+    with open(state_file, "w") as s_file:
+        json.dump(new_file_state, s_file)
 
 
-def tail(logfile, parser, sensor: str, interface: str, run: bool):
-    # Lets figure out were we left off
-    saved_filestate = get_logfile_state(state_file)[sensor][interface]
-    current_state = 0
-    if saved_filestate > current_state:
-        current_state = saved_filestate
-    logger.info(f"Sensor {sensor} - Interface {interface} - Alert fileState at start up: {current_state} (file position)")
+def tail(logfile, parser, sensor_name: str, interface: str):
+    # Let's figure out where we left off
+    saved_file_poss = get_logfile_state()[sensor_name][interface]
+    current_file_poss = 0
+    if saved_file_poss > current_file_poss:
+        current_file_poss = saved_file_poss
+    logger.info(f"Sensor {sensor_name} - Interface {interface} - Alert file position at start up:"
+                f" {current_file_poss} (file position)")
 
-    while run:
+    # Fields we dont want in a notification
+    blacklisted_fields = config.notify.blackListedFields
+
+    while True:
+        # While loop runs as long as threding.Event() is set -> run_tail. Only used in threading
         logfile.seek(0, 2)
-        if logfile.tell() < current_state:
+        if logfile.tell() < current_file_poss:
             logfile.seek(0, 0)
         else:
-            logfile.seek(current_state, 0)
+            logfile.seek(current_file_poss, 0)
         line = logfile.readline()
         if not line:
             time.sleep(1)
+            # Sleep 1 sec and jumps to 'next' while loop iterations
             continue
-        # print line
-        if current_state < logfile.tell():
-            # print logfile.tell()
+
+        if current_file_poss < logfile.tell():
             logger.debug(f"This is where we are at {logfile.tell()}, in file {interface}")
 
         # Lets run the new line through the parser and see whats happening before we say we have read it..
@@ -173,97 +205,112 @@ def tail(logfile, parser, sensor: str, interface: str, run: bool):
         parsed_line = parser(line)
         # alert = parsed_line
         if not parsed_line:
-            # bc eve.json lines may contain other event types than alert.
+            # BC eve.json lines may contain other event types than alert. Parser(s) handles this..
             # Update current file state
-            current_state = logfile.tell()
-            # save current file state to file
-            save_logfile_state(new_state=current_state, sensor=sensor, interface=interface)
-
+            current_file_poss = logfile.tell()
+            # Save current read position state to file
+            save_logfile_state(new_state=current_file_poss, sensor=sensor_name, interface=interface)
+            # Jumps to 'next' while loop iterations
             continue
 
-        # Add interface to alert
+        # Add interface to alert dictionary
         parsed_line["interface"] = interface
 
         if not isFilter_enabled and isNotify_enabled:
-            logger.debug("sending notification..")
-            # The hole notification thing should be cleaned up..
+            # Notifications is enabled but we are not filtering any alert..
+            logger.debug("Sending notification..")
+
             notify.send_notification(
-                message="\n".join(f"{k}: {v}" for k, v in parsed_line.items()),
-                title=f"{sensor} Event\n".title()
+                message="\n".join(f"{field_name.title()}: {value}"
+                                  for field_name, value in parsed_line.items()
+                                  if field_name not in blacklisted_fields),  # join() ends
+                title=f"{sensor_name} Event\n".title()
             )
 
         if isFilter_enabled and not alert_filter.run_filter(alert=munch.munchify(parsed_line)):
             # Filter is enabled and this alert did not match any filters so we can send notification
 
-            # Get pcap if enabled
-            if config.misc.pcap:
-                # returns url to view pcap -> str
+            # Get pcap if enabled. Only applicable for PFsnort alerts
+            if isPcapParser_enabled:
+                # Returns url to view pcap -> str
                 pcap_url = get_alert_pcap(parsed_line)
                 parsed_line["pcap"] = pcap_url
 
             # Add reverse DNS to src/dest
-            src_dns = get_hostname(parsed_line["src"])
-            formatted_src = parsed_line["src"] + " - " + str(src_dns)
-            dst_dns = get_hostname(parsed_line["dst"])
-            formatted_dst = parsed_line["dst"] + " - " + str(dst_dns)
+            if isReverseDNS_enabled:
+                # Reverse DNS is slow
+                src_dns = get_hostname(parsed_line["src"])
+                formatted_src = parsed_line["src"] + " - " + str(src_dns)
+                dst_dns = get_hostname(parsed_line["dest"])
+                formatted_dst = parsed_line["dest"] + " - " + str(dst_dns)
 
-            parsed_line["src"] = formatted_src
-            parsed_line["dst"] = formatted_dst
-
-            # format time
-            formatted_time = datetime.datetime.strptime(parsed_line["time"], '%m/%d/%y-%H:%M:%S.%f')
-            parsed_line["time"] = str(formatted_time)
+                parsed_line["src"] = formatted_src
+                parsed_line["dest"] = formatted_dst
 
             if isNotify_enabled:
-                # this "if" line is not necessary but prolly gonna add DB or something later..
-
-                logger.info("sending notification..")
-                # The hole notification thing should be cleaned up..
-                # str(datetime.datetime.strptime("01/11/19-17:54:45.917318", '%m/%d/%y-%H:%M:%S.%f'))
-                # notify.send_notification(
-                #     message="\n".join(f"{k}: {v}" for k, v in parsed_line.items() if k not in config.misc.blacklistedFields),
-                #     title=f"{sensor} Event\n".title()
-                # )
+                logger.info("Sending notification..")
 
                 notify.send_notification(
-                    message=parsed_line,
-                    title=f"{sensor} Event\n".title()
+                    message="\n".join(f"{field_name.title()}: {value}"
+                                      for field_name, value in parsed_line.items()
+                                      if field_name not in blacklisted_fields),  # join() ends
+                    title=f"{sensor_name} Event\n".title()
                 )
 
-
         # Update current file state
-        current_state = logfile.tell()
+        current_file_poss = logfile.tell()
         # save current file state to file
-        # save_currentstate(interface, file_state)
-        save_logfile_state(new_state=current_state, sensor=sensor, interface=interface)
-
-    # logger.info("Tailer stopped")
-    # logger.info(f"Saved current state: {current_state}")
+        save_logfile_state(new_state=current_file_poss, sensor=sensor_name, interface=interface)
 
 
 if __name__ == "__main__":
     logger.info("Starting up...")
 
-    # global tail_run
-    tail_run = True
-    alert_file = open(enabled_sensor_cfg.filePath, "r")
-    current_parser = parsers[enabled_sensor_cfg.sensorType]["logType"][enabled_sensor_cfg.logType]
-    sensor_interface = enabled_sensor_cfg.interface
-    active_sensor = enabled_sensor_cfg.sensorType
-    # catch keyboard interrupt so we can stop gracefully i think..
-    try:
-        # This is nasty as fuck! and cant do gracefull stop with out threads inside tail()..
-        tail(logfile=alert_file, parser=current_parser, sensor=active_sensor,
-             interface=sensor_interface, run=tail_run)
-    except KeyboardInterrupt:
-        # this is not working at all.. but not important..
-        logger.info("Brutally Killed tail()..")
-        tail_run = False
+    # tail_run determines while loop in tail() to run. Dont known how to do this another way..
+    # Only needed in a threading setup..
+    # tail_run = threading.Event()
+    # tail_run.set()
 
-        save_logfile_state(new_state=alert_file.tell(), sensor=active_sensor, interface=sensor_interface)
-        logger.info(f"Saved current state: {alert_file.tell()} (file position)")
+    # Get the enabled sensor config
+    enabled_sensor_cfg = get_enabled_sensor()
+
+    active_sensor = enabled_sensor_cfg.sensorType
+    sensor_interface = enabled_sensor_cfg.interface
+
+    # If for some reason the sensor interface change after first run, we need to update..
+    current = get_logfile_state()
+    try:
+        current[active_sensor][sensor_interface]
+    except KeyError:
+        # Add the new interface to state_file
+        save_logfile_state(0, active_sensor, sensor_interface)
+
+    # Open log file. This file object will stay open until KeyboardInterrupt is caught (or killed).
+    alert_file = open(enabled_sensor_cfg.filePath, "r")
+
+    # Init selected parser class and parser function
+    parser_cls = parsers[enabled_sensor_cfg.sensorType]["parser_cls"]()
+    parser_func = parsers[enabled_sensor_cfg.sensorType]["logType"][enabled_sensor_cfg.logType]
+    # parser = ->This is the same as doing Snort().full_log if snort is the enabled sensor and full_log is the function.
+    parser = getattr(parser_cls, parser_func)
+
+    # Catch keyboard interrupt so we can stop tail() while loop. This kills the while loop, nothing pretty about it..
+    try:
+        tail(logfile=alert_file, parser=parser, sensor_name=active_sensor,
+             interface=sensor_interface)
+    except KeyboardInterrupt:
+        # Kill tail() while loop. KeyboardInterrupt is the real killer of tail()
+        # tail_run.clear()
+        logger.info("Killed tail()..")
+
+        # Get current position in log file and clean up
+        file_position = alert_file.tell()
         alert_file.close()
         logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
+
+        save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
+        logger.info(f"Saved current state: {file_position} (file position)")
+
         logger.info("Filter stats:")
         logger.info("Filter function stats: %s", alert_filter.filter_func_stats)
         logger.info("Filter name stats: %s", alert_filter.filter_name_stats)
