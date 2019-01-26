@@ -90,7 +90,7 @@ class AlertFilter:
             true_counter = 0
             len_filter = len(_filter.rules)  # THIS filter
             len_truth = len(self.truth[_filter.filterName])  # THIS filter
-            logger.debug(f"filterName: {_filter.name}, len: {len_filter}, len_truth: {len_truth}")
+            logger.debug(f"filterName: {_filter.filterName}, len: {len_filter}, len_truth: {len_truth}")
             logger.debug(f"truth - {self.truth[_filter.filterName]}")
 
             # iterate and run each specific filter for this filter
@@ -121,7 +121,7 @@ class AlertFilter:
                 # Prolly better to use something like "if true_counter in range(len_truth, len_filter)"
 
                 # Enough filter criteria's in rules->[] returned True aka filtering this alert.
-                logger.info(f"Filtering alert '{alert.name}' with filter '{_filter.name}'")
+                logger.info(f"Filtering alert '{alert.name}' with filter '{_filter.filterName}'")
 
                 # Log stats for filter name
                 self.filter_name_stats[_filter.filterName] = self.filter_name_stats.get(_filter.filterName, 0) + 1
