@@ -20,8 +20,8 @@ class Snort:
             r"(?P<proto>TCP|UDP|ICMP|.?),"                  # Protocol
             r"(?P<src>\d+\.\d+\.\d+\.\d+),"                 # Src IP
             r"(?P<src_port>\d+|.?),"                        # Src port
-            r"(?P<dst>\d+\.\d+\.\d+\.\d+),"                 # Dst IP
-            r"(?P<dst_port>\d+|.?),"                        # Dst port
+            r"(?P<dest>\d+\.\d+\.\d+\.\d+),"                # Dst IP
+            r"(?P<dest_port>\d+|.?),"                       # Dst port
             r"\d+,"                                         # Unknown stuff
             r"(?P<class>[a-zA-Z0-9-_ ]+),"                  # Alert class
             r"(?P<pri>\d+)"                                 # Priority
@@ -29,19 +29,17 @@ class Snort:
 
     def full_log(self, line: str) -> dict:
         # Parse snort version 2 alerts/logs
-
         try:
             match = self.pattern.match(line)
             if not match:
                 # Send notification when nothing matches..
-                logger.error(f"No match for line. This should not happen!")
+                logger.warning(f"No match for line. This should not happen!")
                 logger.error(line)
                 SendNotification().send_notification(
                     message="No match for line. This should not happen..\n{}".format(line),
-                    title="Snort parser error"
+                    title="Snort Parser Error"
                 )
                 return {}
-                #exit(1)
 
             return match.groupdict()
 
@@ -50,4 +48,4 @@ class Snort:
             exit(1)
 
     def fast_log(self):
-        pass
+        return NotImplemented
