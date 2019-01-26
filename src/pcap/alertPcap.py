@@ -153,13 +153,6 @@ def execute_search(pcap_file, alert_time):
 
     return parsed
 
-#pcap_dir = "/home/einar/Downloads/snort_logs_2018-10-09-04-14-34_igb1/snort_igb147881"
-
-#pcap_file = pyshark.FileCapture(pcap_dir + "snort.log.1538777270")
-
-# alert_time = datetime.datetime.strptime("10/15/18-22:20:40.517233", '%m/%d/%y-%H:%M:%S.%f')
-#alert_time = datetime.datetime.strptime("10/06/18-01:49:41.935279", '%m/%d/%y-%H:%M:%S.%f')
-
 
 def create_pcap_url(pcap_data: dict, alert: dict) -> str:
     logger.debug(pcap_data)
@@ -168,8 +161,7 @@ def create_pcap_url(pcap_data: dict, alert: dict) -> str:
     ignore_keys = ["pcap"]
     alert_details = "\n".join(f"{k}: {v}" for k, v in alert.items())
     message = alert_details + "\n#### Pcap Details ####\n" + "\n".join(f"{k}: {v}" for k, v in pcap_data.items() if k not in ignore_keys)
-    #msg = "\n".join(f"{k}: {v}" for k, v in pcap_data.items() if k not in ignore_keys)
-    #r = requests.post(gen_url, json={"msg": f"src: {pcap_data['src']}\ndest: {pcap_data['dest']}\nProto: {pcap_data['proto']}", "pcap": pcap_data["pcap"]})
+
     r = requests.post(gen_url, json={"msg": message, "pcap": pcap_data["pcap"]})
 
     if r.status_code != 200:
@@ -177,25 +169,20 @@ def create_pcap_url(pcap_data: dict, alert: dict) -> str:
         return "URL creation Error.."
 
     return r.json()["url"]
-    #return "URL comes here"
 
 
 def get_alert_pcap(alert) -> str:
     pcap_dir = config.misc.pcapDir
-    #pcap_dir = "C:\\Users\\starr\\Downloads\\snort_vtnet144436"
     alert_time = datetime.datetime.strptime(alert["time"], '%m/%d/%y-%H:%M:%S.%f')
     for p_file in newest_pcapfile(pcap_dir):
         exe_search = execute_search(pyshark.FileCapture(p_file), alert_time)
-        #pcap_file = pyshark.FileCapture(p_file)
-        #exe_search = execute_search(pcap_file, alert_time)
-        #pcap_file.close()
+
         if exe_search:
             #pprint(exe_search)
             return create_pcap_url(exe_search, alert)
 
     logger.info("No PCAP data available ")
     return "No PCAP data available "
-# print("no pcap found or payload found")
 
 ####
 ## use dir(pkt) to check atributes
@@ -209,6 +196,3 @@ def get_alert_pcap(alert) -> str:
 #     "dst_port": 53,
 #
 # }
-#print(get_alert_pcap(a))
-#pyshark.FileCapture("C:\\Users\\starr\\Downloads\\snort_vtnet144436\\snort.log.1547251562")
-
