@@ -132,7 +132,7 @@ class AlertFilter:
                 return True
 
         # Not enough filter criteria's matched.. aka this alert should not be filtered..
-        logger.info(f"No filter matched for alert '{alert.name}'. NOT filtering")
+        logger.debug(f"No filter matched for alert '{alert.name}'. NOT filtering")
         return False
 
 
