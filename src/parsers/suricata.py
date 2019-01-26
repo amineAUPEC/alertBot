@@ -12,6 +12,13 @@ class Suricata:
     """ Suricata parser class """
 
     def __init__(self, notify_enabled=False, dateformat: str = ""):
+        # Output date format - see datetime for formatting options
+        self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
+        if dateformat:
+            self._dateformat = dateformat
+
+        self.isNotify_enabled = notify_enabled
+
         # Copied from snort. Needs to be checked..
         self._pattern_full = re.compile(
             r"(?P<time>\d+\/\d+\/\d+-\d+:\d+:\d+\.\d+)\s,"  # time
@@ -35,13 +42,6 @@ class Suricata:
             r"\[Priority: (?P<priority>\d+)\] \{(?P<protocol>[:a-zA-Z0-9_-]+)\} "
             r"(?P<src>.+) \-\> (?P<dest>.+)"
         )
-
-        # Output date format - see datetime for formatting options
-        self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
-        if dateformat:
-            self._dateformat = dateformat
-
-        self.isNotify_enabled = notify_enabled
 
     def eve_json(self, line: str):
         """ Eve.json 'parser' """
