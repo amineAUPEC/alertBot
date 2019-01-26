@@ -3,6 +3,7 @@ Tailer, parser og sender notifikasjoner på Snort og Suricata alarmer.
 ### Install
 Krever python 3.7.x og pip/pipenv. pipenv er anbefalt
 ```bash
+git clone https://github.com/nockstarr/alertBotV2.git  # Or download zip
 pip install pipenv
 cd alertBotV2
 # Install dependencies using a virtual enviorment
