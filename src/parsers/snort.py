@@ -2,6 +2,7 @@ import re
 import logging
 import datetime
 
+from src import config
 from src.notify import Notification
 
 logger = logging.getLogger("alertBot.snort")
@@ -13,30 +14,31 @@ class Snort:
         And all snort parsers and patterns can be found at one place.
         Parsers not tested for SnortV3
     """
-    def __init__(self, notify_enabled=False, dateformat: str = ""):
+    def __init__(self, datetime_format: str = ""):
         # Output date format - see datetime for formatting options
-        self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
-        if dateformat:
-            self._dateformat = dateformat
+        self._datetime_format = "%Y-%m-%d %H:%M:%S.%f"
+        if datetime_format:
+            self._datetime_format = datetime_format
 
-        self.isNotify_enabled = notify_enabled
+        self.isNotify_enabled = config.notify.enabled
 
-        self.pattern_full = re.compile(
-            r"(?P<time>\d+\/\d+\/\d+-\d+:\d+:\d+\.\d+)\s,"  # time
-            r"(?P<gid>\d+),"                                # Signature GID
-            r"(?P<sid>\d+),"                                # Signature SID
-            r"(?P<revision>\d+),"                           # Revision - ??
-            r"\"(?P<name>.*?)\","                           # Alert name
-            r"(?P<protocol>TCP|UDP|ICMP|.?),"               # Protocol
-            r"(?P<src>\d+\.\d+\.\d+\.\d+),"                 # Src IP
-            r"(?P<src_port>\d+|.?),"                        # Src port
-            r"(?P<dest>\d+\.\d+\.\d+\.\d+),"                # Dst IP
-            r"(?P<dest_port>\d+|.?),"                       # Dst port
-            r"\d+,"                                         # Unknown stuff
-            r"(?P<classtype>[a-zA-Z0-9-_ ]+),"              # Alert class
-            r"(?P<priority>\d+)"                            # Priority
+        self._pattern_full = re.compile(
+            r"^(?P<time>\d+\/\d+\/\d+-\d+:\d+:\d+\.\d+)\s,"
+            r"(?P<gid>\d+),"                                    
+            r"(?P<sid>\d+(,\d)?),"
+            r"(?P<revision>\d+),"
+            r"\"(?P<name>.*?)\","
+            r"(?P<protocol>TCP|UDP|ICMP|.?),"
+            r"(?P<src>(\d+\.\d+\.\d+\.\d+)|((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*(\/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?),"
+            r"(?P<src_port>\d+|.?),"
+            r"(?P<dest>(\d+\.\d+\.\d+\.\d+)|((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*(\/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?),"
+            r"(?P<dest_port>\d+|.?),"
+            r"\d+,"                 # Unknown
+            r"(?P<classtype>[a-zA-Z0-9-_ ]+),"
+            r"(?P<priority>\d+)$"
         )
 
+        # Copied from Suricata _pattern_fast. Must be tested..
         self._pattern_fast = re.compile(
             r"(?P<time>\d{2}\/\d{2}\/\d{4}-\d{2}:\d{2}:\d{2}\.\d+)\s+"
             r"\[\*\*\]\s+\[\d+:"
@@ -44,19 +46,22 @@ class Snort:
             r"(?P<revision>\d+)\] "
             r"(?P<name>.+) \[\*\*\]\s+(\[Classification: (?P<classtype>.+)\] )?"
             r"\[Priority: (?P<priority>\d+)\] \{(?P<protocol>[:a-zA-Z0-9_-]+)\} "
-            r"(?P<src>\d+\.\d+\.\d+\.\d+)\:"
-            r"(?P<src_port>\d+|.?) \-\> "
-            r"(?P<dest>\d+\.\d+\.\d+\.\d+)\:"
+            r"(?P<src>(\d+\.\d+\.\d+\.\d+)|((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*(\/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)"
+            r"\:"
+            r"(?P<src_port>\d+|.?)"
+            r" \-\> "
+            r"(?P<dest>(\d+\.\d+\.\d+\.\d+)|((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*(\/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?)"
+            r"\:"
             r"(?P<dest_port>\d+|.?)"
         )
 
     def full_log(self, line: str) -> dict:
         # Parse snort version 2 alerts/logs
         try:
-            match = self.pattern_full.match(line)
+            match = self._pattern_full.match(line)
             if not match:
                 # Send notification when nothing matches..
-                logger.error(f"No match for line. This should not happen! Line: %s", line)
+                logger.critical(f"No match for line. This should not happen! Line: %s", line)
                 if self.isNotify_enabled:
                     Notification().send_notification(
                         message="No match for line. This should not happen..\n{}".format(line),
@@ -67,7 +72,7 @@ class Snort:
             parsed_alert = match.groupdict()
             # Format time
             formatted_time = datetime.datetime.strptime(parsed_alert["time"], "%m/%d/%y-%H:%M:%S.%f")\
-                .strftime(self._dateformat)
+                .strftime(self._datetime_format)
             parsed_alert["time"] = str(formatted_time)
 
             return parsed_alert
