@@ -1,15 +1,14 @@
 # alertBot
-Tailer, parser og sender notifikasjoner på Snort og Suricata alarmer.  
-Content:  
-[Install](#install)
-[Config](#configjson)
-[File State](#filestatejson)
-[Filter](#filtersjson)
-[Eksemple - Suricata fast_log alarm](#eksemple-p-felter-i-en-suricata-fast_log-alarmufiltrert)
-[Eksemple - Suricata eve.json alarm](#eksemple-p-felter-i-en-suricata-evejson-alarmufiltrert)
-[Eksemple - Discord embeds message](#eksempel-discord-embeds-message)
-[Eksemple - Discord General message]()
-[Eksemple - Telegram General message]()
+
+* [Install](#install)  
+* [Config](#configjson)  
+* [File State](#filestatejson)  
+* [Filter](#filtersjson)  
+* [Example - Suricata fast_log alarm](#eksemple-p-felter-i-en-suricata-fast_log-alarmufiltrert)  
+* [Example - Suricata eve.json alarm](#eksemple-p-felter-i-en-suricata-evejson-alarmufiltrert)  
+* [Example - Discord embeds message](#eksempel-discord-embeds-message)
+* [Example - Discord General message](#eksemple-discord-general-message)  
+* [Example - Telegram General message](#eksemple-telegram-general-message)  
 ### Install
 Krever python 3.7.x og pip/pipenv. pipenv er anbefalt
 ```bash
@@ -128,8 +127,8 @@ Suricata kan også ha følgende felter hvis tilgjengelig i eve.json:
 ### Eksempel Discord embeds message
 ![](docs/assets/discord_embed_message.PNG)
 
-### Eksemple Discord General message
+### Eksempel Discord General message
 ![](docs/assets/discord_general_message.PNG)
 
-### Eksemple Telegram General message
+### Eksempel Telegram General message
 ![](docs/assets/telegram_general_message.PNG)
