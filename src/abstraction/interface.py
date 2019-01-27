@@ -6,6 +6,7 @@ class IFaceNotify:
     '''Interface for sending notifications'''
 
     @abstractmethod
-    def send_alert(self, msg, title):
-        '''Send notification on grabbed nzb for a job'''
+    def send_alert(self, msg, title: str) -> bool:
+        ''' Send notification on grabbed nzb for a job '''
+        # msg should only be str or dict
         raise NotImplemented
