@@ -8,34 +8,49 @@ logger = logging.getLogger("alertBot.telegram")
 
 
 class Telegram(IFaceNotify):
-    '''Telegram notification class'''
+    """ Telegram notification class """
 
     def __init__(self, config):
-        self.TOKEN = config.token
-        self.CHAT_ID = config.chat_id
+        self.token = config.token
+        self.chat_id = config.chat_id
+        self.blacklisted_fields = config.blackListedFields  # List
+        self.url = f"https://api.telegram.org/bot{self.token}/sendMessage"
 
-    def sendMessage(self, msg):
-        '''Send Telegram message'''
+    def send_telegram_message(self, msg: str) -> bool:
+        """ Send Telegram message """
 
-        url = "https://api.telegram.org/bot{token}/sendMessage".format(token=self.TOKEN)
-        parms = {
-            "chat_id": self.CHAT_ID,
-            "text": msg,
-
+        params = {
+            "chat_id": self.chat_id,
+            "text": msg
         }
 
-        result = requests.get(url, params=parms)
-        if result.json()["ok"] is False:
+        result = requests.get(self.url, params=params)
+        logger.debug(result.url)
+
+        json_response = result.json()
+        if json_response["ok"] is False:
             # Debug something went wring
+            logger.debug(result.text)
             logging.error("Telegram notification went bad..")
-            #raise Exception("Telegram notification went bad..")
+            logger.error("Telegram Response: %s", json_response)
             return False
 
         return True
 
-    def send_alert(self, msg, title):
-        '''Uses the String representation of the message object to format the message'''
+    def send_alert(self, msg, title: str):
+        """ Uses the String representation of the message object to send Telegram message """
+        telegram_message = "Empty msg, wtf!?"
+        # Since we want in some cases to just send a normal 'string' message or
+        # generate the message by supplied dictionary we need to check the 'msg' arg type and go from there..
+        if isinstance(msg, dict):
+            formatted_message = "\n".join(f"{field_name.title()}: {value}" for field_name, value in msg.items()
+                                          if field_name not in self.blacklisted_fields)  # join() ends
 
-        # title = f"{title} Event\n"
+            # telegram_message = "AlertBot\n\n" + title + formatted_message
+            telegram_message = f"AlertBot\n\n== {title} ==\n{formatted_message}"
+        else:
+            # Send a 'normal' string message
+            # telegram_message = title + msg
+            telegram_message = f"AlertBot\n\n== {title} ==\n{msg}"
 
-        return self.sendMessage(title + str(msg))
+        return self.send_telegram_message(telegram_message)
