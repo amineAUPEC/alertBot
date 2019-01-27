@@ -1,5 +1,15 @@
 # alertBot
-Tailer, parser og sender notifikasjoner på Snort og Suricata alarmer.
+Tailer, parser og sender notifikasjoner på Snort og Suricata alarmer.  
+Content:  
+[Install](#install)
+[Config](#configjson)
+[File State](#filestatejson)
+[Filter](#filtersjson)
+[Eksemple - Suricata fast_log alarm](#eksemple-p-felter-i-en-suricata-fast_log-alarmufiltrert)
+[Eksemple - Suricata eve.json alarm](#eksemple-p-felter-i-en-suricata-evejson-alarmufiltrert)
+[Eksemple - Discord embeds message](#eksempel-discord-embeds-message)
+[Eksemple - Discord General message]()
+[Eksemple - Telegram General message]()
 ### Install
 Krever python 3.7.x og pip/pipenv. pipenv er anbefalt
 ```bash
@@ -47,7 +57,7 @@ Nice2Know
     - blackListedFields: [] - Liste med felter som ikke blir tatt med ved en notifikasjon
     - agents
         - webhook: Ikke fungerendes
-        - discord: har støtte for embed (se eksemple)
+        - discord: har støtte for embeds (se [Eksempel Discord embeds message](#eksempel-discord-embeds-message))
 * PcapParser
     - Experimental. Er kun laget for Snort i et Pfsense setup
 ### fileState.json
@@ -114,5 +124,12 @@ Suricata kan også ha følgende felter hvis tilgjengelig i eve.json:
  * http_method
  * http_user_agent
  
+ 
+### Eksempel Discord embeds message
+![](docs/assets/discord_embed_message.PNG)
 
-        
+### Eksemple Discord General message
+![](docs/assets/discord_general_message.PNG)
+
+### Eksemple Telegram General message
+![](docs/assets/telegram_general_message.PNG)
