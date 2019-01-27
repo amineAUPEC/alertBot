@@ -1,6 +1,9 @@
 {
   "general": {
-    "reverseDns": false
+    "reverseDns": false,
+    "restartOnChange": true,
+    "watchedFiles": ["config.json", "filter.json"],
+    "watchInterval": 5
   },
   "logging": {
     "level": "info",

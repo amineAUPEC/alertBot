@@ -5,7 +5,7 @@ import sys
 import time
 import logging
 from logging import handlers
-# import threading
+import threading
 
 from src import config
 from src.parsers import Suricata, Snort
@@ -13,6 +13,11 @@ from src.notify import Notification
 from src.filtering import AlertFilter
 from src.pcap.alertPcap import get_alert_pcap
 from src.misc.utils import get_hostname
+from src.misc.restart import detect_change
+
+# Vars needed when 'restart' is enabled
+sys_args = sys.argv
+sys_exe = sys.executable
 
 # Logging
 set_loglevel = config.logging.level
@@ -25,9 +30,9 @@ log_levels = {
     "debug": logging.DEBUG
 }
 
-if len(sys.argv) > 1:
+if len(sys_args) > 1:
     try:
-        set_loglevel = sys.argv[1]
+        set_loglevel = sys_args[1]
     except KeyError as e:
         print(e)
         print("Not a valid log level!")
@@ -81,12 +86,14 @@ isNotify_enabled = config.notify.enabled
 isNotifyOnStartUp_enabled = config.notify.notifyOnStartUp
 isPcapParser_enabled = config.pcapParser.enabled
 isReverseDNS_enabled = config.general.reverseDns
+isRestartOnChange_enabled = config.general.restartOnChange
 
 logger.info(f"Reverse DNS is {isReverseDNS_enabled}")
 logger.info(f"Pcap Parser is {isPcapParser_enabled}")
 logger.info(f"Notification is {isNotify_enabled}")
 logger.info(f"Start up Alert is {isNotifyOnStartUp_enabled}")
 logger.info(f"Filter is {isFilter_enabled}")
+logging.info(f"Restart on change is {isRestartOnChange_enabled}")
 
 if isFilter_enabled:
     if not os.path.isfile("filter.json"):
@@ -106,9 +113,20 @@ if isFilter_enabled:
     alert_filter = AlertFilter(filter_list)
     alert_filter.validate_filter_list()
 
+restart_success = False
+if sys_args[len(sys_args) - 1] == "restarted":
+    logger.info("AlertBot Restarted Successfully")
+    restart_success = True
+    sys_args.pop()
+
 if isNotify_enabled:
     notify = Notification()
-    if isNotifyOnStartUp_enabled:
+    if isNotifyOnStartUp_enabled and restart_success:
+        notify.send_notification(message="AlertBot started after successful restart", title="AlertBot")
+        # Not really necessary I think..
+        restart_success = False
+
+    elif isNotifyOnStartUp_enabled:
         notify.send_notification(message="AlertBot started..", title="AlertBot")
 
 
@@ -270,6 +288,17 @@ if __name__ == "__main__":
     # Only needed in a threading setup..
     # tail_run = threading.Event()
     # tail_run.set()
+    threads = []
+    run_event = None
+    if isRestartOnChange_enabled:
+        watch_interval = config.general.watchInterval  # Minutes
+        watched_files = config.general.watchedFiles
+        run_event = threading.Event()
+        run_event.set()
+        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval, watched_files))
+        threads.append(th)
+        th.start()
+
 
     # Get the enabled sensor config
     enabled_sensor_cfg = get_enabled_sensor()
@@ -314,6 +343,14 @@ if __name__ == "__main__":
         logger.info("Filter stats:")
         logger.info("Filter function stats: %s", alert_filter.filter_func_stats)
         logger.info("Filter name stats: %s", alert_filter.filter_name_stats)
+
+        # Kill threads if any (ex file watcher).
+        if threads:
+            logging.info("Killing threads..")
+            run_event.clear()
+            for t in threads:
+                t.join(2)
+            logging.debug("All threads are dead")
 
         logger.info("Exiting..")
         exit(0)
