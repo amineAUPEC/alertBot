@@ -11,7 +11,7 @@
     "backupCount": 3
   },
   "filter": {
-    "enabled": true,
+    "enabled": false,
     "path": "filter.json"
   },
   "sensors": {
@@ -30,7 +30,7 @@
   },
   "notify": {
     "enabled": true,
-    "startUpAlert": false,
+    "notifyOnStartUp": true,
     "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload"],
     "agents": [
             {
@@ -42,7 +42,8 @@
             {
                 "name": "discord",
                 "enabled": false,
-                "webhookUrl": "webhook url"
+                "webhookUrl": "webhook url",
+                "useEmbed": false
             },
             {
               "name": "webhook",
