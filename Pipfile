@@ -8,6 +8,7 @@ requests = "*"
 netaddr = "*"
 munch = "*"
 pyshark = "*"
+psutil = "*"
 
 
 [dev-packages]
