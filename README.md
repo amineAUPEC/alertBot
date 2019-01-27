@@ -30,6 +30,9 @@ Følgende argumenter er støttet og overstyrer config.json
 Nice2Know
 * Config må finnes og ligge i 'root' feks -> alertBotV2/
     - congfig path er hardkodet i src/__init__py
+* General
+    - reverseDns: true|false - Legger til reverseDNS til src/dest felter
+    - restartOnChange: true|false - Restarter programmet når endringer i 'watchedFiles' blir oppdaget
 * Logging
     - level: info|warn|critical|error|debug
     - logSize: 3MB er default
@@ -40,11 +43,13 @@ Nice2Know
     - Snort
         - logType: full|fast - Sett hva en du bruker.
 * Notify
-    - startUpAlert: true|false - Sender en notifikasjon ved oppstart
+    - notifyOnStartUp: true|false - Sender en notifikasjon ved oppstart
     - blackListedFields: [] - Liste med felter som ikke blir tatt med ved en notifikasjon
-    - webhook: experimental
+    - agents
+        - webhook: Ikke fungerendes
+        - discord: har støtte for embed (se eksemple)
 * PcapParser
-    - Er kun laget for Snort i et Pfsense setup
+    - Experimental. Er kun laget for Snort i et Pfsense setup
 ### fileState.json
 Nice2Know
 * Blir generert automatisk
@@ -73,21 +78,36 @@ Nice2Know
     - startswith
     - endswith
 
-### Eksemple på felter i en Suricata alarm:
+### Eksemple på felter i en Suricata fast_log alarm(ufiltrert):
+```
+{'classtype': 'Detection of a Network Scan',
+ 'dest': '192.168.4.10',
+ 'dest_port': '80',
+ 'gid': '1',
+ 'name': 'MALWARE-CNC URI - known scanner tool muieblackcat',
+ 'priority': '3',
+ 'protocol': 'TCP',
+ 'revision': '4',
+ 'sid': '21257',
+ 'src': '157.230.128.187',
+ 'src_port': '35242',
+ 'time': '2019-01-25 17:58:03.598388'}
+```
+Snort skal ha de samme feltene.
+### Eksemple på felter i en Suricata eve.json alarm(ufiltrert)
 ```
 {'action': 'allowed',
  'dest': '192.168.1.1',
  'dest_port': 53,
- 'name': 'ET DNS Query to a *.top domain - Likely Hostile',
- 'payload': 'AAQBAAABAAAAAAAADnNkZnpzamZqaHNpdWZlA3RvcAAAAQAB',
+ 'name': 'INDICATOR-COMPROMISE Suspicious .pw dns query',
+ 'payload': 'AAQBAAABAAAAAAAABGFsZXgCcHcAAAEAAQ==',
  'proto': 'UDP',
- 'src': '192.168.1.145',
- 'src_port': 52244,
- 'time': '2018-10-11 14:10:37'}
+ 'src': '192.168.1.50',
+ 'src_port': 51331,
+ 'time': '2019-01-25 01:02:23.579419'}
 ```
-Payload er alltid i b64.  
-Snort har de samme feltene foruten 'action' og 'payload'.  
-Suricata kan også ha følgende felter hvis tilgjengelig:
+Payload burde være b64.  
+Suricata kan også ha følgende felter hvis tilgjengelig i eve.json:
  * hostname
  * url
  * http_refer
