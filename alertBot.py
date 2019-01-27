@@ -122,12 +122,12 @@ if sys_args[len(sys_args) - 1] == "restarted":
 if isNotify_enabled:
     notify = Notification()
     if isNotifyOnStartUp_enabled and restart_success:
-        notify.send_notification(message="AlertBot started after successful restart", title="AlertBot")
+        notify.send_notification(message="Started after successful restart", title="Upstart event")
         # Not really necessary I think..
         restart_success = False
 
     elif isNotifyOnStartUp_enabled:
-        notify.send_notification(message="AlertBot started..", title="AlertBot")
+        notify.send_notification(message="AlertBot started..", title="Upstart event")
 
 
 # parsers Dictionary holds all available parser classes and parser functions. Could be auto generated but meh.
@@ -198,9 +198,6 @@ def tail(logfile, parser, sensor_name: str, interface: str):
     logger.info(f"Sensor {sensor_name} - Interface {interface} - Alert file position at start up:"
                 f" {current_file_poss} (file position)")
 
-    # Fields we dont want in a notification
-    blacklisted_fields = config.notify.blackListedFields
-
     while True:
         # While loop runs as long as threding.Event() is set -> run_tail. Only used in threading
         logfile.seek(0, 2)
@@ -239,10 +236,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
             logger.debug("Sending notification..")
 
             notify.send_notification(
-                message="\n".join(f"{field_name.title()}: {value}"
-                                  for field_name, value in parsed_line.items()
-                                  if field_name not in blacklisted_fields),  # join() ends
-                title=f"{sensor_name} Event\n".title()
+                message=parsed_line, title=f"{sensor_name} Event\n".title()
             )
 
         if isFilter_enabled and not alert_filter.run_filter(alert=munch.munchify(parsed_line)):
@@ -259,20 +253,17 @@ def tail(logfile, parser, sensor_name: str, interface: str):
                 # Reverse DNS is slow
                 src_dns = get_hostname(parsed_line["src"])
                 formatted_src = parsed_line["src"] + " - " + str(src_dns)
-                dst_dns = get_hostname(parsed_line["dest"])
-                formatted_dst = parsed_line["dest"] + " - " + str(dst_dns)
+                dest_dns = get_hostname(parsed_line["dest"])
+                formatted_dest = parsed_line["dest"] + " - " + str(dest_dns)
 
                 parsed_line["src"] = formatted_src
-                parsed_line["dest"] = formatted_dst
+                parsed_line["dest"] = formatted_dest
 
             if isNotify_enabled:
                 logger.info("Sending notification..")
 
                 notify.send_notification(
-                    message="\n".join(f"{field_name.title()}: {value}"
-                                      for field_name, value in parsed_line.items()
-                                      if field_name not in blacklisted_fields),  # join() ends
-                    title=f"{sensor_name} Event\n".title()
+                    message=parsed_line, title=f"{sensor_name} Event\n".title()
                 )
 
         # Update current file state
@@ -299,7 +290,6 @@ if __name__ == "__main__":
         threads.append(th)
         th.start()
 
-
     # Get the enabled sensor config
     enabled_sensor_cfg = get_enabled_sensor()
 
@@ -320,7 +310,7 @@ if __name__ == "__main__":
     # Init selected parser class and parser function
     parser_cls = parsers[enabled_sensor_cfg.sensorType]["parser_cls"]()
     parser_func = parsers[enabled_sensor_cfg.sensorType]["logType"][enabled_sensor_cfg.logType]
-    # parser = ->This is the same as doing Snort().full_log if snort is the enabled sensor and full_log is the function.
+    # parser ->This is the same as doing Snort().full_log if snort is the enabled sensor and full_log is the function.
     parser = getattr(parser_cls, parser_func)
 
     # Catch keyboard interrupt so we can stop tail() while loop. This kills the while loop, nothing pretty about it..
