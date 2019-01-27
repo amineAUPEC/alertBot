@@ -9,6 +9,8 @@ class Notify(IFaceNotify):
     '''
     Bridge for all notification agents
     Actual class to be used when sending a notification
+
+    TODO: this class is not really needed and could be integrated in class Notification..
     '''
 
     def __init__(self, agent_name, config):
@@ -27,7 +29,7 @@ class Notification:
     def __init__(self):
         self.config = config.notify
 
-    def getEnabledNotifiers(self):
+    def get_enabled_notifiers(self):
         enabled = []
         if self.config.enabled:
 
@@ -41,7 +43,7 @@ class Notification:
 
         return enabled
 
-    def getNotifyConfig(self, agent_name):
+    def get_notify_config(self, agent_name):
         for agent in self.config.agents:
             if agent.name == agent_name:
                 return agent
@@ -51,11 +53,11 @@ class Notification:
 
     def send_notification(self, message, title):
         # Send notification to all enabled notification agents
-        agents = self.getEnabledNotifiers()
+        agents = self.get_enabled_notifiers()
         for agent in agents:
-            agentConf = self.getNotifyConfig(agent.name)
+            agent_conf = self.get_notify_config(agent.name)
 
-            if Notify(agent_name=agent.name, config=agentConf).send_alert(message, title):
+            if Notify(agent_name=agent.name, config=agent_conf).send_alert(message, title):
                 logger.info("Sent notification to %s", agent.name)
             else:
                 logger.warning("Notification was not sent to %s", agent.name)
