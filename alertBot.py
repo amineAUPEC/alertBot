@@ -14,6 +14,7 @@ from src.filtering import AlertFilter
 from src.pcap.alertPcap import get_alert_pcap
 from src.misc.utils import get_hostname
 from src.misc.restart import detect_change
+from src.abstraction.models import Alert
 
 # Vars needed when 'restart' is enabled
 sys_args = sys.argv
@@ -228,42 +229,43 @@ def tail(logfile, parser, sensor_name: str, interface: str):
             # Jumps to 'next' while loop iterations
             continue
 
-        # Add interface to alert dictionary
-        parsed_line["interface"] = interface
+        alert = Alert(**parsed_line)
+        # Add interface to alert
+        alert.interface = interface
 
         if not isFilter_enabled and isNotify_enabled:
             # Notifications is enabled but we are not filtering any alert..
             logger.debug("Sending notification..")
 
             notify.send_notification(
-                message=parsed_line, title=f"{sensor_name} Event\n".title()
+                message=alert.__dict__, title=f"{sensor_name} Event\n".title()
             )
 
-        if isFilter_enabled and not alert_filter.run_filter(alert=munch.munchify(parsed_line)):
+        if isFilter_enabled and not alert_filter.run_filter(alert=alert):
             # Filter is enabled and this alert did not match any filters so we can send notification
 
             # Get pcap if enabled. Only applicable for PFsnort alerts
             if isPcapParser_enabled:
                 # Returns url to view pcap -> str
-                pcap_url = get_alert_pcap(parsed_line)
-                parsed_line["pcap"] = pcap_url
+                pcap_url = get_alert_pcap(alert.__dict__)
+                alert.pcap = pcap_url
 
             # Add reverse DNS to src/dest
             if isReverseDNS_enabled:
                 # Reverse DNS is slow
-                src_dns = get_hostname(parsed_line["src"])
-                formatted_src = parsed_line["src"] + " - " + str(src_dns)
-                dest_dns = get_hostname(parsed_line["dest"])
-                formatted_dest = parsed_line["dest"] + " - " + str(dest_dns)
+                src_dns = get_hostname(alert.src)
+                formatted_src = alert.src + " - " + str(src_dns)
+                dest_dns = get_hostname(alert.dest)
+                formatted_dest = alert.dest + " - " + str(dest_dns)
 
-                parsed_line["src"] = formatted_src
-                parsed_line["dest"] = formatted_dest
+                alert.src = formatted_src
+                alert.dest = formatted_dest
 
             if isNotify_enabled:
                 logger.info("Sending notification..")
 
                 notify.send_notification(
-                    message=parsed_line, title=f"{sensor_name} Event\n".title()
+                    message=alert.__dict__, title=f"{sensor_name} Event\n".title()
                 )
 
         # Update current file state
@@ -331,8 +333,7 @@ if __name__ == "__main__":
         logger.info(f"Saved current state: {file_position} (file position)")
 
         logger.info("Filter stats:")
-        logger.info("Filter function stats: %s", alert_filter.filter_func_stats)
-        logger.info("Filter name stats: %s", alert_filter.filter_name_stats)
+        logger.info(alert_filter.filter_stats())
 
         # Kill threads if any (ex file watcher).
         if threads:
