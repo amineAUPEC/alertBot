@@ -94,7 +94,7 @@ logger.info(f"Pcap Parser is {isPcapParser_enabled}")
 logger.info(f"Notification is {isNotify_enabled}")
 logger.info(f"Start up Alert is {isNotifyOnStartUp_enabled}")
 logger.info(f"Filter is {isFilter_enabled}")
-logging.info(f"Restart on change is {isRestartOnChange_enabled}")
+logger.info(f"Restart on change is {isRestartOnChange_enabled}")
 
 if isFilter_enabled:
     if not os.path.isfile("filter.json"):
@@ -336,11 +336,11 @@ if __name__ == "__main__":
 
         # Kill threads if any (ex file watcher).
         if threads:
-            logging.info("Killing threads..")
+            logger.info("Killing threads..")
             run_event.clear()
             for t in threads:
                 t.join(2)
-            logging.debug("All threads are dead")
+            logger.debug("All threads are dead")
 
         logger.info("Exiting..")
         exit(0)
