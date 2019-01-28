@@ -48,8 +48,7 @@
             {
               "name": "webhook",
               "enabled": false,
-              "url": "webhook url",
-              "destinations": {"telegram": ["anna"], "discord": ["alerts"]}
+              "url": "webhook url"
             }
         ]
   },

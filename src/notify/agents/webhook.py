@@ -9,12 +9,12 @@ logger = logging.getLogger("alertBot.webhook")
 
 class Webhook(IFaceNotify):
     def __init__(self, config):
-        self.dest = config.destinations
+        # self.dest = config.destinations
         self.url = config.url
 
-    def send_alert(self, msg, title):
+    def send_alert(self, msg, title: str):
         payload = {
-            "destinations": self.dest,
+            # "destinations": self.dest,
             "message": msg,
             "title": title
         }
@@ -23,5 +23,4 @@ class Webhook(IFaceNotify):
         if r.status_code != 200:
             logger.warning("Webhook response code !=200. Status code: %d", r.status_code)
             return False
-        # Return is never checked..
         return True
