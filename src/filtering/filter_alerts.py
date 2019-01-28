@@ -3,31 +3,57 @@ import logging
 from netaddr import IPNetwork, IPAddress, AddrFormatError
 import munch
 
+from src.abstraction.exceptions import FilterValidationError
+from src.abstraction.models import Alert
+
 logger = logging.getLogger("alertBot.filter")
 
 
 class AlertFilter:
 
     filter_funcs = {}
+    required_filter_fields = ["filterName", "rules"]
+    required_rules_fields = ["func", "value", "field"]
+
+    # TODO: Save and load filter stats to/from file
+
+    @staticmethod
+    def validate_regex(pattern: str, filter_name: str):
+        """ Validate regex """
+        try:
+            validated = re.compile(pattern)
+        except re.error as regexerror:
+            logger.debug(regexerror)
+            logger.error(f"<Invalid regular expression '{pattern}' in filter '{filter_name}'>")
+            exit(1)
+        else:
+            return validated
 
     def __init__(self, filter_list: list):
-        # munchify filter_list so we can use dot notations when referencing dict keys
+        # Validate all filters before we do anything..
+        self._validate_filter(filter_list)
+
+        # munchify filter_list so we can use dot notations when referencing dict keys, even nested keys.
         # Also compile any regex patterns in filter_list
-        self.filterList = munch.munchify(self.compile_regex(filter_list))
+        self.filterList = munch.munchify(self._compile_regex(filter_list))
+
         # Sort filter_list so that we start with the most specific filter e.g the filter with most rules comes first
         self.filter_list = sorted(self.filterList, key=lambda f: len(f["rules"]), reverse=True)
-        # Generate truth_index so that we can use implicit OR
-        # when a filter have multiple rules with a multiple of the same filed
-        self.truth = self.truth_index()
-        # Filtering stats
-        self.filter_func_true_stats = {}
-        self.filter_func_stats = {}
-        self.filter_name_stats = {}
 
-    def truth_index(self) -> dict:
+        # Generate truth_index so that we can use implicit OR when
+        # a filter have multiple rules with a multiple of the same filed
+        self.truth = self._truth_index()
+
+        # Filtering stats
+        self.filter_func_true_stats = {}     # How many times a filter func has returned true
+        self.filter_func_stats = {}          # How many times a filter func has been invoked?
+        self.filter_name_stats = {}          # How many times filter(filterName) has returned true
+        self.filtered_alert_name_stats = {}  # How many times 'alert.name' has been filtered
+
+    def _truth_index(self) -> dict:
         index = {}
         for f in self.filter_list:
-            field_val = {}
+            field_val = dict()
             for r in f["rules"]:
                 field_val[r["field"]] = field_val.get(r["field"], 0) + 1
 
@@ -35,26 +61,68 @@ class AlertFilter:
 
         return index
 
-    def compile_regex(self, filter_list: list):
-        # Validate and compile regex
+    def _compile_regex(self, filter_list: list):
+        """ Validates and compiles regex if any """
         for _filter in filter_list:
             for rule in _filter["rules"]:
                 if rule["func"] == "regex":
-                    rule["value"] = self.validate_regex(rule["value"], _filter["filterName"])
+                    rule["value"] = self.validate_regex(pattern=rule["value"], filter_name=_filter["filterName"])
 
         return filter_list
 
-    def validate_regex(self, pattern: str, filter_name: str):
-        try:
-            validated = re.compile(pattern)
-        except re.error as regexerror:
-            print(regexerror)
-            print(f"<Invalid regular expression '{pattern}' in filter '{filter_name}'>")
-            exit(1)
-        else:
-            return validated
+    def _validate_filter(self, filter_list: list):
+        """ Validate all filters """
 
-    def validate_filter_list(self):
+        # filter_list is NOT type Munch at this point.
+        # This is the received arg(filter_list) from __init__ and is !NOT! 'self.filter_list'!
+        used_filter_names = []
+
+        for _filter in filter_list:
+            filter_keys = _filter.keys()
+            for required_field in self.required_filter_fields:
+                # Validate that required_filter_fields exist
+                if required_field not in filter_keys:
+                    logger.debug(_filter)
+                    raise FilterValidationError(f"Required filter field '{required_field}' missing from filter")
+
+                # Validate that required_filter_fields have a value.
+                if not _filter[required_field]:
+                    logger.debug(_filter)
+                    raise FilterValidationError(f"Required filter field '{required_field}' is missing a value in "
+                                                f"filter '{_filter['filterName']}'")
+
+            # Safely add filterName(value) to used_filter_names. Checked later..
+            used_filter_names.append(_filter["filterName"])
+
+            # Validate rules 'section' in filter
+            for rule in _filter["rules"]:
+                rules_keys = rule.keys()
+                for required_rule_f in self.required_rules_fields:
+                    # Validate that required_rules_fields exists
+                    if required_rule_f not in rules_keys:
+                        logger.debug(rule)
+                        raise FilterValidationError(f"Required rule field '{required_rule_f}' missing from rules in "
+                                                    f"filter '{_filter['filterName']}'")
+
+                    # Validate that required_rules_fields have a value
+                    if not rule[required_rule_f]:
+                        logger.debug(rule)
+                        raise FilterValidationError(f"Required rule field '{required_rule_f}' is missing a value in "
+                                                    f"filter '{_filter['filterName']}'")
+
+                    # Validate that rule.func value is supported..
+                    if rule["func"] not in self.filter_funcs.keys():
+                        raise FilterValidationError(f"Unknown rule function '{rule['func']}' detected in "
+                                                    f"filter '{_filter['filterName']}'")
+
+        # Validate that a filterName(value) is only used once.
+        uniq_filter_names = set(used_filter_names)
+        if len(used_filter_names) > len(uniq_filter_names):
+            raise FilterValidationError("A filterName(value) is used more than once. filterName should be uniq")
+
+        logger.info("All filters validated successfully")
+
+    def _old_validate_filter_list(self):
         # Validate that filter_list have all fields..
         try:
             for _filter in self.filter_list:
@@ -78,13 +146,27 @@ class AlertFilter:
                     if not rule["field"]:
                         raise Exception(f"Filter missing 'field' field\n {_filter}")
         except KeyError:
+            #print("Missing fields in filter list")
             logger.critical("Missing fields in filter list")
             raise
 
-    def run_filter(self, alert: munch.Munch) -> bool:
+    def filter_stats(self) -> dict:
+        """ Get all filter stats
+
+            Maybe just return a 'nice' formatted string?
+        """
+
+        return {
+            "filter_func_true_stats": self.filter_func_true_stats,
+            "filter_func_stats": self.filter_func_stats,
+            "filter_name_stats": self.filter_name_stats,
+            "filtered_alert_name_stats": self.filtered_alert_name_stats
+        }
+
+    def run_filter(self, alert: Alert) -> bool:
         """ 200 iq function """
-        if not isinstance(alert, munch.Munch):
-            alert = munch.munchify(alert)
+        if not isinstance(alert, Alert):
+            raise TypeError("Argument 'alert' is not type Alert")
 
         for _filter in self.filter_list:
             true_counter = 0
@@ -94,11 +176,11 @@ class AlertFilter:
             logger.debug(f"truth - {self.truth[_filter.filterName]}")
 
             # iterate and run each specific filter for this filter
-            tmp_stats = {}
+            tmp_stats = dict()
             for rule in _filter.rules:
                 try:
                     # Mapping filter rules to actual functions and exec (value, field)
-                    if self.filter_funcs[rule.func](rule.value, alert[rule.field]):
+                    if self.filter_funcs[rule.func](rule.value, alert.__dict__[rule.field]):
                         # This specific filter rule returned true.
                         # All filters in rule->[] must be True to actually filter the alert,
                         # except if a field is used multiple times
@@ -129,6 +211,9 @@ class AlertFilter:
                 # Log stats for filter functions when this filter returned true..
                 for func_name, func_val in tmp_stats.items():
                     self.filter_func_stats[func_name] = self.filter_func_stats.get(func_name, 0) + func_val
+
+                # Log stats for how many times 'alert.name' was filtered
+                self.filtered_alert_name_stats[alert.name] = self.filtered_alert_name_stats.get(_filter.filterName, 0) + 1
                 return True
 
         # Not enough filter criteria's matched.. aka this alert should not be filtered..
