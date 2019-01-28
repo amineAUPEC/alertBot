@@ -112,7 +112,6 @@ if isFilter_enabled:
             exit(1)
 
     alert_filter = AlertFilter(filter_list)
-    alert_filter.validate_filter_list()
 
 restart_success = False
 if sys_args[len(sys_args) - 1] == "restarted":
