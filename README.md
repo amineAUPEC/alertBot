@@ -41,8 +41,8 @@ Nice2Know
 * Config must exist in 'root' ex -> alertBotV2/
     - congfig path is hard coded in src/__init__py
 * General
-    - reverseDns: true|false - Populates src/dest fields with reverseDNS
-    - restartOnChange: true|false - Restarts program when changes in 'watchedFiles' is detected
+    - reverseDns: `true|false` - Populates src/dest fields with reverseDNS
+    - restartOnChange: `true|false` - Restarts program when changes in 'watchedFiles' is detected
 * Logging
     - level: `info|warn|critical|error|debug`
     - logSize: 3MB is default size
