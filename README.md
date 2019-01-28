@@ -30,8 +30,8 @@ Copy example config and filter
 cp example_config.json config.json
 cp example_filter.json filter.json
 ```
-Edit config.json and filter.json  
-Active virtual environment(only when using pipenv) `pipenv shell`  
+Edit `config.json` and `filter.json`  
+Active virtual environment (only when using pipenv) `pipenv shell`  
 Start bot `python alertBot.py`  
 
 Following argument(s) are supported and overrides config.json    
@@ -44,20 +44,20 @@ Nice2Know
     - reverseDns: true|false - Populates src/dest fields with reverseDNS
     - restartOnChange: true|false - Restarts program when changes in 'watchedFiles' is detected
 * Logging
-    - level: info|warn|critical|error|debug
+    - level: `info|warn|critical|error|debug`
     - logSize: 3MB is default size
     - backupCount: 3 is default. Dvs max count after log rotation
 * Sensors
     - Suricata
-        - logType: eve|full|fast - Specify log format
+        - logType: `eve|full|fast` - Specify log format
     - Snort
-        - logType: full|fast - Specify log format
+        - logType: `full|fast` - Specify log format
 * Notify
-    - notifyOnStartUp: true|false - Send a notification on startup
-    - blackListedFields: [] - List of fields. Ignored when sending notifications
+    - notifyOnStartUp: `true|false`true|false - Send a notification on startup
+    - blackListedFields: `[]` - List of fields. Ignored when sending notifications
     - agents
         - webhook: Posts alert as JSON (without 'filtering' fields) to a web resource
-        - discord: Supports embeds (se [Eksempel Discord embeds message](#eksempel-discord-embeds-message))
+        - discord: Supports embeds (se [Example Discord embeds message](#example-discord-embeds-message))
 * PcapParser
     - Experimental. Dont enable this
 ### fileState.json
