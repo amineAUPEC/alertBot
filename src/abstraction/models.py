@@ -1,0 +1,29 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class Alert:
+    """ Model/Dataclass used to 'store' parsed alerts
+
+        Why? Because some parsed alert fields are expected to exist and is used in multiple places in the code base.
+        Persistence is key.
+        We also get nice error messages whenever at mandatory field is missing.
+        Oh! and intellisense!
+
+    """
+    def __init__(self, time: str, name: str, src: str, dest: str, **kwargs):
+        # Mandatory fields
+        self.time = time
+        self.name = name
+        self.src = src
+        self.dest = dest
+
+        # Set fields that is received in kwargs, but not mandatory. These fields do not get 'intellisense'
+        for field_name, field_value in kwargs.items():
+            self.__setattr__(field_name, field_value)
+
+    def __repr__(self):
+        # Auto generate the __repr__ with all available fields
+        rep = ", ".join(f"{field_name}='{value}'" for field_name, value in self.__dict__.items())
+        return f"AlertModel({rep})"
+
