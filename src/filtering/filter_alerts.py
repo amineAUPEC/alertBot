@@ -53,6 +53,7 @@ class AlertFilter:
         self.filter_func_stats = {}          # How many times a filter func(rule) was true when the filter returned true
         self.filter_name_stats = {}          # How many times filter(filterName) has returned true
         self.filtered_alert_name_stats = {}  # How many times 'alert.name' has been filtered
+        self.not_filtered_alerts_stats = {}  # How many times 'alert.name' was _NOT_ filtered
 
         # Load existing filter stats into Filter stats vars (only if existing stats exists)
         self._load_filter_stats()
@@ -139,7 +140,8 @@ class AlertFilter:
             "filter_func_true_stats": self.filter_func_true_stats,
             "filter_func_stats": self.filter_func_stats,
             "filter_name_stats": self.filter_name_stats,
-            "filtered_alert_name_stats": self.filtered_alert_name_stats
+            "filtered_alert_name_stats": self.filtered_alert_name_stats,
+            "not_filtered_alerts_stats": self.not_filtered_alerts_stats
         }
 
     def save_filter_stats(self) -> None:
@@ -164,6 +166,7 @@ class AlertFilter:
             self.filter_func_stats = stats["filter_func_stats"]
             self.filter_name_stats = stats["filter_name_stats"]
             self.filtered_alert_name_stats = stats["filtered_alert_name_stats"]
+            self.not_filtered_alerts_stats = stats["not_filtered_alerts_stats"]
 
         logger.info("Loaded filter stats")
 
@@ -224,6 +227,9 @@ class AlertFilter:
 
         # Not enough filter criteria's matched.. aka this alert should not be filtered..
         logger.debug(f"No filter matched for alert: '{alert.name}'")
+        # Log stats for how many times 'alert.name' was _NOT_ filtered
+        self.not_filtered_alerts_stats[alert.name] = self.not_filtered_alerts_stats.get(alert.name, 0) + 1
+
         return False
 
 
