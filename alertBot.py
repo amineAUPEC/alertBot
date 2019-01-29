@@ -194,7 +194,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
     current_file_poss = 0
     if saved_file_poss > current_file_poss:
         current_file_poss = saved_file_poss
-    logger.info(f"Sensor {sensor_name} - Interface {interface} - Alert file position at start up:"
+    logger.info(f"Sensor {sensor_name} Interface {interface}  Alert file position at start up:"
                 f" {current_file_poss} (file position)")
 
     while True:
