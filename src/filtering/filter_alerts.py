@@ -122,34 +122,6 @@ class AlertFilter:
 
         logger.info("All filters validated successfully")
 
-    def _old_validate_filter_list(self):
-        # Validate that filter_list have all fields..
-        try:
-            for _filter in self.filter_list:
-                if not _filter["filterName"]:
-                    raise Exception(f"Filter missing 'filterName' field\n {_filter}")
-
-                if not _filter["rules"]:
-                    raise Exception(f"Filter missing 'rules' field\n {_filter}")
-
-                for rule in _filter["rules"]:
-
-                    if not rule["func"]:
-                        raise Exception(f"Filter missing 'func' field\n {_filter}")
-
-                    if not rule["func"] in self.filter_funcs.keys():
-                        raise Exception(f"Filter func '%s' not valid\n {_filter}" % rule["func"])
-
-                    if not rule["value"]:
-                        raise Exception(f"Filter missing 'value' field\n {_filter}")
-
-                    if not rule["field"]:
-                        raise Exception(f"Filter missing 'field' field\n {_filter}")
-        except KeyError:
-            #print("Missing fields in filter list")
-            logger.critical("Missing fields in filter list")
-            raise
-
     def filter_stats(self) -> dict:
         """ Get all filter stats
 
