@@ -1,5 +1,7 @@
-import re
 import logging
+import re
+import json
+import os
 from netaddr import IPNetwork, IPAddress, AddrFormatError
 import munch
 
@@ -14,6 +16,7 @@ class AlertFilter:
     filter_funcs = {}
     required_filter_fields = ["filterName", "rules"]
     required_rules_fields = ["func", "value", "field"]
+    stats_file = "filter_stats.json"
 
     # TODO: Save and load filter stats to/from file
 
@@ -44,11 +47,14 @@ class AlertFilter:
         # a filter have multiple rules with a multiple of the same filed
         self.truth = self._truth_index()
 
-        # Filtering stats
+        # Declare Filter stats vars
         self.filter_func_true_stats = {}     # How many times a filter func has returned true
         self.filter_func_stats = {}          # How many times a filter func has been invoked?
         self.filter_name_stats = {}          # How many times filter(filterName) has returned true
         self.filtered_alert_name_stats = {}  # How many times 'alert.name' has been filtered
+
+        # Load existing filter stats into Filter stats vars (only if existing stats exists)
+        self._load_filter_stats()
 
     def _truth_index(self) -> dict:
         index = {}
@@ -134,6 +140,33 @@ class AlertFilter:
             "filter_name_stats": self.filter_name_stats,
             "filtered_alert_name_stats": self.filtered_alert_name_stats
         }
+
+    def save_filter_stats(self) -> None:
+        """ Save filter stats to file """
+        with open(self.stats_file, "w") as f:
+            json.dump(self.filter_stats(), f)
+
+        logger.info(f"Saved filter stats to {self.stats_file}")
+
+        return None
+
+    def _load_filter_stats(self) -> None:
+        """ Load saved filter stats from file to filter stats vars(if stats file exist """
+        if not os.path.isfile(self.stats_file) or os.path.getsize(self.stats_file) == 0:
+            # stats_file don't exists or is not empty. No stats to load..
+            logger.info(f"No filter stats to load. {self.stats_file} don't exist or is empty.")
+            return None
+
+        with open(self.stats_file, "r") as f:
+            stats = json.load(f)
+            self.filter_func_true_stats = stats["filter_func_true_stats"]
+            self.filter_func_stats = stats["filter_func_stats"]
+            self.filter_name_stats = stats["filter_name_stats"]
+            self.filtered_alert_name_stats = stats["filtered_alert_name_stats"]
+
+        logger.info("Loaded filter stats")
+
+        return None
 
     def run_filter(self, alert: Alert) -> bool:
         """ 200 iq function """

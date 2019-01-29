@@ -330,8 +330,10 @@ if __name__ == "__main__":
         save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
         logger.info(f"Saved current state: {file_position} (file position)")
 
-        logger.info("Filter stats:")
-        logger.info(alert_filter.filter_stats())
+        if isFilter_enabled:
+            logger.info("Filter stats:")
+            logger.info(alert_filter.filter_stats())
+            alert_filter.save_filter_stats()
 
         # Kill threads if any (ex file watcher).
         if threads:
