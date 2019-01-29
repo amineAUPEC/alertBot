@@ -91,7 +91,7 @@ isRestartOnChange_enabled = config.general.restartOnChange
 logger.info(f"Reverse DNS is {isReverseDNS_enabled}")
 logger.info(f"Pcap Parser is {isPcapParser_enabled}")
 logger.info(f"Notification is {isNotify_enabled}")
-logger.info(f"Start up Alert is {isNotifyOnStartUp_enabled}")
+logger.info(f"Startup alert is {isNotifyOnStartUp_enabled}")
 logger.info(f"Filter is {isFilter_enabled}")
 logger.info(f"Restart on change is {isRestartOnChange_enabled}")
 
@@ -126,7 +126,7 @@ if isNotify_enabled:
         restart_success = False
 
     elif isNotifyOnStartUp_enabled:
-        notify.send_notification(message="AlertBot started..", title="Upstart event")
+        notify.send_notification(message="AlertBot powered up..", title="Upstart event")
 
 
 # parsers Dictionary holds all available parser classes and parser functions. Could be auto generated but meh.
@@ -165,7 +165,7 @@ def get_enabled_sensor():
         exit(1)
 
     if enabled_count > 1:
-        logger.error("More than one sensor enabled! Only one can be enabled")
+        logger.error(f"{enabled_count} sensor enabled! Only one can be enabled!")
         exit(1)
 
     return selected_sensor
@@ -260,7 +260,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
                 alert.dest = formatted_dest
 
             if isNotify_enabled:
-                logger.info("Sending notification..")
+                logger.debug("Sending notification..")
 
                 notify.send_notification(
                     message=alert.__dict__, title=f"{sensor_name} Event".title()
@@ -273,7 +273,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
 
 
 if __name__ == "__main__":
-    logger.info("Starting up...")
+    logger.info("Powering up...")
 
     # tail_run determines while loop in tail() to run. Dont known how to do this another way..
     # Only needed in a threading setup..
@@ -343,5 +343,5 @@ if __name__ == "__main__":
                 t.join(2)
             logger.debug("All threads are dead")
 
-        logger.info("Exiting..")
+        logger.info("Exiting please wait..")
         exit(0)

@@ -22,7 +22,7 @@ def detect_change(sys_exe, sys_args: list, run_event, interval: int, files_to_wa
     """ Detects changes in watched files """
 
     # This function should be executed in a thread
-    logger.info("started detect change")
+    logger.info("Started file watcher (detect_change)")
 
     watched_files = files_to_watch
     watched_files_MTIMES = [(f, os.path.getmtime(f)) for f in watched_files]
