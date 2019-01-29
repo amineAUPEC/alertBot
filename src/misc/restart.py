@@ -3,32 +3,19 @@ import os
 import sys
 import logging
 import threading
-# import psutil
 
-# from src import config
 logger = logging.getLogger("alertBot.fileWatcher")
 
 
 def restart_app(sys_exe, sys_args, run_event):
-    """ Restart entire  program """
-    # py_version = "python3.7"
+    """ Restart the entire program """
     arguments = sys_args[:]
     arguments.append("restarted")
-
-    # try:
-    #     p = psutil.Process(os.getpid())
-    #
-    #     for handler in p.open_files() + p.connections():
-    #         os.close(handler.fd)
-    # except Exception as e:
-    #     print("Error:", e)
-    #     os._exit(0)
 
     run_event.clear()
     logger.warning("Restarting app")
     logging.shutdown()
     os.execl(sys_exe, sys_exe, * arguments)
-    #os.execv(sys.executable, [py_version] + sys_args)
 
 
 def detect_change(sys_exe, sys_args: list, run_event, interval: int, files_to_watch: list):
