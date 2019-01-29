@@ -1,5 +1,4 @@
 import json
-import munch
 import os
 import sys
 import time
@@ -237,7 +236,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
             logger.debug("Sending notification..")
 
             notify.send_notification(
-                message=alert.__dict__, title=f"{sensor_name} Event\n".title()
+                message=alert.__dict__, title=f"{sensor_name} Event".title()
             )
 
         if isFilter_enabled and not alert_filter.run_filter(alert=alert):
@@ -264,7 +263,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
                 logger.info("Sending notification..")
 
                 notify.send_notification(
-                    message=alert.__dict__, title=f"{sensor_name} Event\n".title()
+                    message=alert.__dict__, title=f"{sensor_name} Event".title()
                 )
 
         # Update current file state
