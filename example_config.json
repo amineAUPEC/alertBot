@@ -1,7 +1,7 @@
 {
   "general": {
     "reverseDns": false,
-    "restartOnChange": true,
+    "restartOnChange": false,
     "watchedFiles": ["config.json", "filter.json"],
     "watchInterval": 5
   },
@@ -22,20 +22,20 @@
       "interface": "LAN"
     },
     "suricata": {
-      "enabled": true,
+      "enabled": false,
       "filePath": "path/to/eve.json",
       "logType": "eve",
       "interface": "WAN"
     }
   },
   "notify": {
-    "enabled": true,
-    "notifyOnStartUp": true,
+    "enabled": false,
+    "notifyOnStartUp": false,
     "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload"],
     "agents": [
             {
                 "name": "telegram",
-                "enabled": true,
+                "enabled": false,
                 "token": "TOKEN",
                 "chat_id": 99999999
             },
@@ -51,10 +51,5 @@
               "url": "webhook url"
             }
         ]
-  },
-  "pcapParser": {
-    "enabled": false,
-    "pcapGenUrl": "pcapGenUrl",
-    "pcapDir": "pcapDir"
   }
 }
