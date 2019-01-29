@@ -12,6 +12,7 @@ logger = logging.getLogger("alertBot.filter")
 
 
 class AlertFilter:
+    """ 200 iq class """
 
     filter_funcs = {}
     required_filter_fields = ["filterName", "rules"]
@@ -48,8 +49,8 @@ class AlertFilter:
         self.truth = self._truth_index()
 
         # Declare Filter stats vars
-        self.filter_func_true_stats = {}     # How many times a filter func has returned true
-        self.filter_func_stats = {}          # How many times a filter func has been invoked?
+        self.filter_func_true_stats = {}     # How many times a single filter rule function has returned true
+        self.filter_func_stats = {}          # How many times a filter func(rule) was true when the filter returned true
         self.filter_name_stats = {}          # How many times filter(filterName) has returned true
         self.filtered_alert_name_stats = {}  # How many times 'alert.name' has been filtered
 
@@ -169,7 +170,7 @@ class AlertFilter:
         return None
 
     def run_filter(self, alert: Alert) -> bool:
-        """ 200 iq function """
+        """ The function that implements the filtering logic """
         if not isinstance(alert, Alert):
             raise TypeError("Argument 'alert' is not type Alert")
 
@@ -213,16 +214,16 @@ class AlertFilter:
                 # Log stats for filter name
                 self.filter_name_stats[_filter.filterName] = self.filter_name_stats.get(_filter.filterName, 0) + 1
 
-                # Log stats for filter functions when this filter returned true..
+                # Log stats for filter functions when this filter (not just 1 rule) returned true..
                 for func_name, func_val in tmp_stats.items():
                     self.filter_func_stats[func_name] = self.filter_func_stats.get(func_name, 0) + func_val
 
                 # Log stats for how many times 'alert.name' was filtered
-                self.filtered_alert_name_stats[alert.name] = self.filtered_alert_name_stats.get(_filter.filterName, 0) + 1
+                self.filtered_alert_name_stats[alert.name] = self.filtered_alert_name_stats.get(alert.name, 0) + 1
                 return True
 
         # Not enough filter criteria's matched.. aka this alert should not be filtered..
-        logger.debug(f"No filter matched for alert '{alert.name}'. NOT filtering")
+        logger.debug(f"No filter matched for alert: '{alert.name}'")
         return False
 
 
