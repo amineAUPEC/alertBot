@@ -84,12 +84,12 @@ filter_list = None  # JSON loaded filter list
 isFilter_enabled = config.filter.enabled
 isNotify_enabled = config.notify.enabled
 isNotifyOnStartUp_enabled = config.notify.notifyOnStartUp
-isPcapParser_enabled = config.pcapParser.enabled
+# isPcapParser_enabled = config.pcapParser.enabled
 isReverseDNS_enabled = config.general.reverseDns
 isRestartOnChange_enabled = config.general.restartOnChange
 
 logger.info(f"Reverse DNS is {isReverseDNS_enabled}")
-logger.info(f"Pcap Parser is {isPcapParser_enabled}")
+# logger.info(f"Pcap Parser is {isPcapParser_enabled}")
 logger.info(f"Notification is {isNotify_enabled}")
 logger.info(f"Startup alert is {isNotifyOnStartUp_enabled}")
 logger.info(f"Filter is {isFilter_enabled}")
@@ -243,10 +243,10 @@ def tail(logfile, parser, sensor_name: str, interface: str):
             # Filter is enabled and this alert did not match any filters so we can send notification
 
             # Get pcap if enabled. Only applicable for PFsnort alerts
-            if isPcapParser_enabled:
-                # Returns url to view pcap -> str
-                pcap_url = get_alert_pcap(alert.__dict__)
-                alert.pcap = pcap_url
+            # if isPcapParser_enabled:
+            #     # Returns url to view pcap -> str
+            #     pcap_url = get_alert_pcap(alert.__dict__)
+            #     alert.pcap = pcap_url
 
             # Add reverse DNS to src/dest
             if isReverseDNS_enabled:
