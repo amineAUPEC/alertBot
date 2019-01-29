@@ -9,7 +9,7 @@ import threading
 logger = logging.getLogger("alertBot.fileWatcher")
 
 
-def restart_app(sys_exe, sys_args):
+def restart_app(sys_exe, sys_args, run_event):
     """ Restart entire  program """
     # py_version = "python3.7"
     arguments = sys_args[:]
@@ -49,7 +49,7 @@ def detect_change(sys_exe, sys_args: list, run_event, interval: int, files_to_wa
                 logger.info(f"Detected change in file: {str(f)}")
                 logger.warning("Attempting to restart")
 
-                restart_app(sys_exe, sys_args)
+                restart_app(sys_exe, sys_args, run_event)
 
         logger.debug("No change detected")
 
