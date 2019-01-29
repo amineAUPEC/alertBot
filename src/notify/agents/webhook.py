@@ -12,7 +12,7 @@ class Webhook(IFaceNotify):
         # self.dest = config.destinations
         self.url = config.url
 
-    def send_alert(self, msg, title: str):
+    def send_notification(self, msg, title: str):
         payload = {
             # "destinations": self.dest,
             "message": msg,

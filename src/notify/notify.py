@@ -21,8 +21,8 @@ class Notify(IFaceNotify):
             self._NOTIFY_AGENTS[cls.__name__.lower()] = cls
         self.agent = self._NOTIFY_AGENTS[agent_name.lower()](agent_conf)
 
-    def send_alert(self, msg, title) -> bool:
-        return self.agent.send_alert(msg, title)
+    def send_notification(self, msg, title) -> bool:
+        return self.agent.send_notification(msg, title)
 
 
 class Notification:
@@ -58,7 +58,7 @@ class Notification:
         agents = self._get_enabled_notifiers()
         for agent in agents:
             agent_conf = self._get_notify_config(agent.name)
-            if Notify(agent_name=agent.name, agent_conf=agent_conf).send_alert(message, title):
+            if Notify(agent_name=agent.name, agent_conf=agent_conf).send_notification(message, title):
                 logger.info("Sent notification to %s", agent.name)
             else:
                 logger.warning("Notification was not sent to %s", agent.name)

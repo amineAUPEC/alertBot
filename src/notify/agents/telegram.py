@@ -37,7 +37,7 @@ class Telegram(IFaceNotify):
 
         return True
 
-    def send_alert(self, msg, title: str):
+    def send_notification(self, msg, title: str):
         """ Uses the String representation of the message object to send Telegram message """
         telegram_message = "Empty msg, wtf!?"
         # Since we want in some cases to just send a normal 'string' message or

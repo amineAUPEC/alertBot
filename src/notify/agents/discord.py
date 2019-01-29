@@ -79,7 +79,7 @@ class Discord(IFaceNotify):
 
         return fixed_message
 
-    def send_alert(self, msg, title: str):
+    def send_notification(self, msg, title: str):
         """ The callable 'send message' function used by the interface """
         msg_data_obj = {}
         # Since we want in some cases to just send a normal 'string' message or
