@@ -30,13 +30,13 @@ log_levels = {
     "debug": logging.DEBUG
 }
 
-if len(sys_args) > 1:
+if len(sys_args) > 1 and sys_args[1] != "restarted":
     try:
         set_loglevel = sys_args[1]
     except KeyError as e:
         print(e)
         print("Not a valid log level!")
-        print(f"Valid log levels ars: \n{log_levels.keys()}")
+        print(f"Valid log levels are: {log_levels.keys()}")
         exit(1)
     except IndexError as IE:
         pass
@@ -121,7 +121,7 @@ if sys_args[len(sys_args) - 1] == "restarted":
 if isNotify_enabled:
     notify = Notification()
     if isNotifyOnStartUp_enabled and restart_success:
-        notify.send_notification(message="Started after successful restart", title="Upstart event")
+        notify.send_notification(message="Started after successful restart", title="Restart event")
         # Not really necessary I think..
         restart_success = False
 
@@ -194,7 +194,7 @@ def tail(logfile, parser, sensor_name: str, interface: str):
     current_file_poss = 0
     if saved_file_poss > current_file_poss:
         current_file_poss = saved_file_poss
-    logger.info(f"Sensor {sensor_name.title()}, Interface {interface},  Alert file position at start up:"
+    logger.info(f"Sensor: {sensor_name.title()} Interface: {interface},  Alert file position start up:"
                 f" {current_file_poss} (file position)")
 
     while True:
