@@ -286,7 +286,7 @@ if __name__ == "__main__":
         watched_files = config.general.watchedFiles
         run_event = threading.Event()
         run_event.set()
-        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval, watched_files))
+        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval, watched_files, alert_filter))
         threads.append(th)
         th.start()
 
@@ -340,7 +340,7 @@ if __name__ == "__main__":
             logger.info("Killing threads..")
             run_event.clear()
             for t in threads:
-                t.join(2)
+                t.join(1)
             logger.debug("All threads are dead")
 
         logger.info("Exiting please wait..")
