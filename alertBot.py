@@ -10,7 +10,6 @@ from src import config
 from src.parsers import Suricata, Snort
 from src.notify import Notification
 from src.filtering import AlertFilter
-from src.pcap.alertPcap import get_alert_pcap
 from src.misc.utils import get_hostname
 from src.misc.restart import detect_change
 from src.abstraction.models import Alert
@@ -119,7 +118,7 @@ if sys_args[len(sys_args) - 1] == "restarted":
     sys_args.pop()
 
 if isNotify_enabled:
-    notify = Notification()
+    notify = Notification(config.notify)
     if isNotifyOnStartUp_enabled and restart_success:
         notify.send_notification(message="Started after successful restart", title="Restart event")
         # Not really necessary I think..
