@@ -7,7 +7,6 @@ name = "pypi"
 requests = "*"
 netaddr = "*"
 munch = "*"
-pyshark = "*"
 
 
 [dev-packages]

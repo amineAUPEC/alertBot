@@ -1,8 +1,6 @@
 import time
 import os
-import sys
 import logging
-import threading
 
 logger = logging.getLogger("alertBot.fileWatcher")
 
