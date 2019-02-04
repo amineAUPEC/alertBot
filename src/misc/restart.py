@@ -31,7 +31,7 @@ def detect_change(sys_exe, sys_args: list, run_event, interval: int, files_to_wa
     watched_files_MTIMES = [(f, os.path.getmtime(f)) for f in watched_files]
 
     while run_event.is_set():
-        time.sleep(interval * 60)  # minutes
+        time.sleep(interval)  # Seconds
 
         for f, mtime in watched_files_MTIMES:
             logger.debug(f"current: {os.path.getmtime(f)}, old: {mtime}")

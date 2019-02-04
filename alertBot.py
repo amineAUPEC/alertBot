@@ -336,11 +336,12 @@ if __name__ == "__main__":
 
         # Kill threads if any (ex file watcher).
         if threads:
-            logger.info("Killing threads..")
+            logger.info("Killing thread(s).. You must wait 'watchInterval' time:/")
             run_event.clear()
             for t in threads:
-                t.join(1)
+                t.join(config.general.watchInterval)
             logger.debug("All threads are dead")
 
-        logger.info("Exiting please wait..")
+        logger.info("Exiting..")
+        logging.shutdown()
         exit(0)
