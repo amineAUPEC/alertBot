@@ -53,6 +53,7 @@ Nice2Know
 * General
     - reverseDns: `true|false` - Populates src/dest fields with reverseDNS
     - restartOnChange: `true|false` - Restarts program when changes in 'watchedFiles' is detected
+    - watchInterval: Seconds - `watchedFiles` interval
 * Logging
     - level: `info|warn|critical|error|debug`
     - logSize: 3MB is default size
