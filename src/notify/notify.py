@@ -1,6 +1,5 @@
 from src.abstraction.interface import IFaceNotify
 import logging
-#from src import config
 
 logger = logging.getLogger("alertBot.notify")
 
@@ -11,14 +10,13 @@ class Notification(IFaceNotify):
         Actual class to be used when sending a notification
         """
 
-    # Registers all notification classes {agent_name: cls_obj}
-    NOTIFY_AGENTS = dict()
-    for cls in IFaceNotify.__subclasses__():
-        NOTIFY_AGENTS[cls.__name__.lower()] = cls
-
     def __init__(self, config):
         self.notify_config = config  # Notify config
         self.enabled_agents = self._get_enabled_notifiers()  # List of all enabled agent configs
+        # Registers all notification classes {agent_name: cls_obj}
+        self.NOTIFY_AGENTS = dict()
+        for cls in IFaceNotify.__subclasses__():
+            self.NOTIFY_AGENTS[cls.__name__.lower()] = cls
 
     def _get_enabled_notifiers(self) -> list:
         # Generates a list(of config) of all enabled notify agents
