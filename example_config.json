@@ -3,7 +3,7 @@
     "reverseDns": false,
     "restartOnChange": false,
     "watchedFiles": ["config.json", "filter.json"],
-    "watchInterval": 5
+    "watchInterval": 30
   },
   "logging": {
     "level": "info",
