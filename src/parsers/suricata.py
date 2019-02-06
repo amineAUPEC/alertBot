@@ -79,9 +79,13 @@ class Suricata:
             "dest": alert['dest_ip'],
             "dest_port": alert['dest_port'],
             "proto": alert['proto'],
-            "action": alert["alert"]["action"],
-            "payload": alert['payload'] if alert['payload'] else ""
+            "action": alert["alert"]["action"]
         }
+        # Payload field not always there..
+        try:
+            new_alert["payload"] = alert['payload']
+        except KeyError:
+            new_alert["payload"] = ""
 
         # Request by alex.. thanks for messy code..
         try:
