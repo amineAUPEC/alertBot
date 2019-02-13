@@ -122,7 +122,7 @@ class Suricata:
             logger.debug("Alert dont contain http http_method field..")
 
         try:
-            new_alert["http_user_agent"] = alert["http"]["http_user_agent"]
+            new_alert["http_user_agent"] = url_sanitizer(alert["http"]["http_user_agent"])
         except KeyError:
             logger.debug("Alert dont contain http http_method field..")
 
