@@ -362,12 +362,9 @@ if __name__ == "__main__":
 
         # Try to shutdown stuff
         # Get current position in log file and clean up
-        file_position = alert_file.tell()
         alert_file.close()
         logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
-
-        save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
-        logger.info(f"Saved current state: {file_position} (file position)")
+        # No reason to save current file state/poss since that prolly were errors occurs..
 
         if isFilter_enabled:
             logger.info("Filter stats:")
