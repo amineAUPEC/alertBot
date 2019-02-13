@@ -47,10 +47,10 @@ class Telegram(IFaceNotify):
                                           if field_name not in self.blacklisted_fields)  # join() ends
 
             # telegram_message = "AlertBot\n\n" + title + formatted_message
-            telegram_message = f"AlertBot\n\n== {title} ==\n{formatted_message}"
+            telegram_message = f"AlertBot\n== {title} ==\n{formatted_message}"
         else:
             # Send a 'normal' string message
             # telegram_message = title + msg
-            telegram_message = f"AlertBot\n\n== {title} ==\n{msg}"
+            telegram_message = f"AlertBot\n== {title} ==\n{msg}"
 
         return self.send_telegram_message(telegram_message)
