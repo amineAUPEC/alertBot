@@ -87,6 +87,19 @@ class Suricata:
         except KeyError:
             new_alert["payload"] = ""
 
+        # *port* fields are not always there.. Ex ICMP alerts..
+        # This is resolve this by setting src/dest port field default value to int(0) in Alert dataclass
+        # as well as expecting  KeyError
+        try:
+            new_alert["src_port"] = url_sanitizer(alert["src_port"])
+        except KeyError:
+            logger.debug("Alert dont contain src_port field..")
+
+        try:
+            new_alert["dest_port"] = url_sanitizer(alert["dest_port"])
+        except KeyError:
+            logger.debug("Alert dont contain dest_port field..")
+
         # Request by alex.. thanks for messy code..
         try:
             new_alert["hostname"] = url_sanitizer(alert["http"]["hostname"])

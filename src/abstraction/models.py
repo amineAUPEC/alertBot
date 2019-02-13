@@ -11,12 +11,14 @@ class Alert:
         Oh! and intellisense!
 
     """
-    def __init__(self, time: str, name: str, src: str, dest: str, **kwargs):
+    def __init__(self, time: str, name: str, src: str, dest: str, src_port: int = 0, dest_port: int = 0, **kwargs):
         # Mandatory fields
         self.time = time
         self.name = name
         self.src = src
+        self.src_port = src_port
         self.dest = dest
+        self.dest_port = dest_port
 
         # Set fields that is received in kwargs, but not mandatory. These fields do not get 'intellisense'
         for field_name, field_value in kwargs.items():
