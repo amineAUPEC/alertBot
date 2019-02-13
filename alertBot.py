@@ -1,9 +1,10 @@
+import logging
+from logging import handlers
 import json
 import os
 import sys
+import traceback
 import time
-import logging
-from logging import handlers
 import threading
 
 from src import config
@@ -117,6 +118,7 @@ if sys_args[len(sys_args) - 1] == "restarted":
     restart_success = True
     sys_args.pop()
 
+notify = None
 if isNotify_enabled:
     notify = Notification(config.notify)
     if isNotifyOnStartUp_enabled and restart_success:
@@ -285,7 +287,8 @@ if __name__ == "__main__":
         watched_files = config.general.watchedFiles
         run_event = threading.Event()
         run_event.set()
-        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval, watched_files, alert_filter))
+        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval,
+                                                          watched_files, alert_filter))
         threads.append(th)
         th.start()
 
@@ -345,3 +348,43 @@ if __name__ == "__main__":
         logger.info("Exiting..")
         logging.shutdown()
         exit(0)
+
+    except Exception as e:
+        # Catch and Log all unexpected exceptions..
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        logger.exception("An unexpected error has occurred!", exc_info=True)
+
+        tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        msg = "An unexpected error has occurred! Check logs! Shutting down..\n" + "".join(tb_line for tb_line in tb)
+
+        if isNotify_enabled:
+            notify.send_notification(message=msg, title="Unexpected error Event")
+
+        # Try to shutdown stuff
+        # Get current position in log file and clean up
+        file_position = alert_file.tell()
+        alert_file.close()
+        logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
+
+        save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
+        logger.info(f"Saved current state: {file_position} (file position)")
+
+        if isFilter_enabled:
+            logger.info("Filter stats:")
+            logger.info(alert_filter.filter_stats())
+            alert_filter.save_filter_stats()
+
+        # Kill threads if any (ex file watcher).
+        if threads:
+            logger.info(
+                f"Killing thread(s).. You must wait 'watchInterval' time. ({config.general.watchInterval}sec)")
+            run_event.clear()
+            for t in threads:
+                t.join(config.general.watchInterval)
+            logger.debug("All threads are dead")
+
+        logger.info("Exiting..")
+        logging.shutdown()
+        exit(1)
+
+
