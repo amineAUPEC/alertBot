@@ -75,9 +75,7 @@ class Suricata:
                                                "%Y-%m-%dT%H:%M:%S.%f").strftime(self._dateformat),
             "name": alert['alert']['signature'],
             "src": alert['src_ip'],
-            "src_port": alert['src_port'],
             "dest": alert['dest_ip'],
-            "dest_port": alert['dest_port'],
             "proto": alert['proto'],
             "action": alert["alert"]["action"]
         }
