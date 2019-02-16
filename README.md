@@ -24,9 +24,9 @@
 ## Install
 Requires python 3.7.x and pip/pipenv. Pipenv is recommended
 ```bash
-git clone https://github.com/nockstarr/alertBotV2.git  # Or download zip
+git clone https://github.com/nockstarr/alertBot.git  # Or download zip
 pip install pipenv
-cd alertBotV2
+cd alertBot
 # Install dependencies using a virtual enviorment
 pipenv install
 ```
@@ -48,7 +48,7 @@ The first time you run this 'bot' and your alert log file is full of alerts you 
 Whenever it's done plowing your logs (it is pretty fast) you can stop the program (`ctrl+c`), and enable reverseDNS and notifications. 
 ## config.json
 Nice2Know
-* Config must exist in 'root' ex -> alertBotV2/
+* Config must exist in 'root' ex -> alertBot/
     - congfig path is hard coded in src/__init__py
 * General
     - reverseDns: `true|false` - Populates src/dest fields with reverseDNS
@@ -56,7 +56,7 @@ Nice2Know
     - watchInterval: Seconds - `watchedFiles` interval
 * Logging
     - alertBot is using logging.config.dictConfig for configuration.
-    - Refer to logging module [documentation.](https://docs.python.org/3.7/library/logging.html) for changes.
+    - Refer to logging module [documentation](https://docs.python.org/3.7/library/logging.html) for changes.
 * Sensors
     - Suricata
         - logType: `eve|full|fast` - Specify log format
@@ -76,7 +76,7 @@ Nice2Know
 * Path is hardcoded in alertBot.py
 ## filters.json
 Nice2Know
-* Must exist in 'root' ex -> alertBotV2/
+* Must exist in 'root' ex -> alertBot/
 * filters.json can contain many filters.
 * A filter can contain many rules. 
 * A filter can contain multiple rules with the same field(field name).
