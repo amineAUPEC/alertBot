@@ -1,5 +1,5 @@
 import logging
-from logging import handlers
+import logging.config
 import json
 import os
 import sys
@@ -19,12 +19,13 @@ from src.abstraction.models import Alert
 sys_args = sys.argv
 sys_exe = sys.executable
 
-# Logging
-set_loglevel = config.logging.level
+# Create logger
+logging.config.dictConfig(config.logging)
+logger = logging.getLogger("alertBot")
 
 log_levels = {
     "info": logging.INFO,
-    "warn": logging.WARN,
+    "warn": logging.WARNING,
     "critical": logging.CRITICAL,
     "error": logging.ERROR,
     "debug": logging.DEBUG
@@ -32,38 +33,16 @@ log_levels = {
 
 if len(sys_args) > 1 and sys_args[1] != "restarted":
     try:
-        set_loglevel = sys_args[1]
+        # Use log level from command line argument
+        logger.setLevel(log_levels[sys_args[1]])
     except KeyError as e:
         print(e)
-        print("Not a valid log level!")
-        print(f"Valid log levels are: {log_levels.keys()}")
+        logger.error(e)
+        logger.warning("Not a valid log level!")
+        logger.warning(f"Valid log levels are: {log_levels.keys()}")
         exit(1)
     except IndexError as IE:
         pass
-
-print(f"Using Log Level '{set_loglevel}'")
-# Create logger
-logger = logging.getLogger("alertBot")
-logger.setLevel(log_levels[set_loglevel])
-
-# Setup log rotation
-log_size = config.logging.logSize  # 3000000  # 3 mb
-bck_count = config.logging.backupCount
-rotate_logs = logging.handlers.RotatingFileHandler(filename="alertBot.log", maxBytes=log_size, backupCount=bck_count)
-rotate_logs.setLevel(log_levels[set_loglevel])
-
-# Create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(log_levels[set_loglevel])
-
-# Create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y:%m:%d %H:%M:%S')
-rotate_logs.setFormatter(formatter)
-ch.setFormatter(formatter)
-
-# Add the handlers to the logger
-logger.addHandler(rotate_logs)
-logger.addHandler(ch)
 
 # File state for alerts (global)
 state_file = "fileState.json"

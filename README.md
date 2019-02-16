@@ -55,9 +55,8 @@ Nice2Know
     - restartOnChange: `true|false` - Restarts program when changes in 'watchedFiles' is detected
     - watchInterval: Seconds - `watchedFiles` interval
 * Logging
-    - level: `info|warn|critical|error|debug`
-    - logSize: 3MB is default size
-    - backupCount: 3 is default. Dvs max count after log rotation
+    - alertBot is using logging.config.dictConfig for configuration.
+    - Refer to logging module [documentation.](https://docs.python.org/3.7/library/logging.html) for changes.
 * Sensors
     - Suricata
         - logType: `eve|full|fast` - Specify log format

@@ -5,11 +5,6 @@
     "watchedFiles": ["config.json", "filter.json"],
     "watchInterval": 30
   },
-  "logging": {
-    "level": "info",
-    "logSize": 3000000,
-    "backupCount": 3
-  },
   "filter": {
     "enabled": false,
     "path": "filter.json"
@@ -51,5 +46,34 @@
               "url": "webhook url"
             }
         ]
+  },
+  "logging": {
+    "version": 1,
+    "formatters": {
+      "default": {
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "datefmt": "%Y:%m:%d %H:%M:%S"
+      }
+    },
+    "handlers": {
+      "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "default",
+        "stream": "ext://sys.stdout"
+      },
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": "alertBot.log",
+        "formatter": "default",
+        "maxBytes": 3000000,
+        "backupCount": 3
+      }
+    },
+    "loggers":{
+      "alertBot": {
+        "handlers": ["console", "file"],
+        "level": "INFO"
+      }
+    }
   }
 }
