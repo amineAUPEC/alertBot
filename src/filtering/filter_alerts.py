@@ -147,7 +147,7 @@ class AlertFilter:
     def save_filter_stats(self) -> None:
         """ Save filter stats to file """
         with open(self.stats_file, "w") as f:
-            json.dump(self.filter_stats(), f)
+            json.dump(self.filter_stats(), f, indent=4)
 
         logger.info(f"Saved filter stats to {self.stats_file}")
 
