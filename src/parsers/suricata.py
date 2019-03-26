@@ -86,8 +86,8 @@ class Suricata:
             new_alert["payload"] = ""
 
         # *port* fields are not always there.. Ex ICMP alerts..
-        # This is resolve this by setting src/dest port field default value to int(0) in Alert dataclass
-        # as well as expecting  KeyError
+        # This is resolved by setting src/dest port field default value to int(0) in Alert dataclass
+        # as well as expecting KeyError
         try:
             new_alert["src_port"] = alert["src_port"]
         except KeyError:
@@ -139,7 +139,7 @@ class Suricata:
                 # Send notification when nothing matches..
                 logger.error(f"No match for line. This should not happen! Line: %s", line)
                 if self.isNotify_enabled:
-                    Notification().send_notification(
+                    Notification(config.notify).send_notification(
                         message="No match for line. This should not happen..\n{}".format(line),
                         title="Suricata fast_log Parser Error"
                     )
@@ -156,5 +156,6 @@ class Suricata:
             return parsed_alert
 
         except re.error as rex_error:
+
             logger.error(rex_error)
-            exit(1)
+            raise rex_error
