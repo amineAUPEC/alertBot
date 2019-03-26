@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
         if isFilter_enabled:
             logger.info("Filter stats:")
-            logger.info(alert_filter.filter_stats())
+            logger.info("Check alert filter stats in 'filter_stats.json'")
             alert_filter.save_filter_stats()
 
         # Kill threads if any (ex file watcher).
@@ -346,7 +346,7 @@ if __name__ == "__main__":
         # No reason to save current file state/poss since that prolly were errors occurs..
 
         if isFilter_enabled:
-            logger.info("Check alert filter stats in 'filter_stats.json':")
+            logger.info("Check alert filter stats in 'filter_stats.json'")
             alert_filter.save_filter_stats()
 
         # Kill threads if any (ex file watcher).
