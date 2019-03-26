@@ -19,8 +19,6 @@ class AlertFilter:
     required_rules_fields = ["func", "value", "field"]
     stats_file = "filter_stats.json"
 
-    # TODO: Save and load filter stats to/from file
-
     @staticmethod
     def validate_regex(pattern: str, filter_name: str):
         """ Validate regex """
