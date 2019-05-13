@@ -37,12 +37,15 @@ class Discord(IFaceNotify):
         """ Generate Discord embed message. See Discord API for more info. """
         snort_img = "https://blog.rapid7.com/content/images/kk-img/2017/01/thumb-snort.jpg"
         suricata_img = "https://idsips.files.wordpress.com/2015/10/suri-400x400.png?w=300"
+        paloalto_img = "https://duo.com/assets/img/partners/select-partners/palo-alto.png"
         avatar_url = "https://www.actiontec.com/wp-content/uploads/2018/04/hacker-300x215.jpg"
         icon_url = avatar_url  # just a default icon..
         if "snort" in title.lower():
             icon_url = snort_img
         elif "suricata" in title.lower():
             icon_url = suricata_img
+        elif "paloalto" in title.lower():
+            icon_url = paloalto_img
 
         webhook_obj = {
             "username": "AlertBot",

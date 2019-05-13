@@ -21,12 +21,23 @@
       "filePath": "path/to/eve.json",
       "logType": "eve",
       "interface": "WAN"
+    },
+    "paloalto": {
+      "enabled": false,
+      "logSourceType": "http",
+      "ip": "",
+      "port": 443,
+      "apikey": "",
+      "logType": "threat",
+      "interface": "TAP",
+      "pullInterval": 2,
+      "nlogs": 20
     }
   },
   "notify": {
     "enabled": false,
     "notifyOnStartUp": false,
-    "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload"],
+    "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload", "seqno"],
     "agents": [
             {
                 "name": "telegram",

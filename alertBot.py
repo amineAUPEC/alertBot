@@ -8,7 +8,7 @@ import time
 import threading
 
 from src import config
-from src.parsers import Suricata, Snort
+from src.parsers import Suricata, Snort, PaloAltoParser, PA
 from src.notify import Notification
 from src.filtering import AlertFilter
 from src.misc.utils import get_hostname
@@ -125,6 +125,12 @@ parsers = {
             "fast": "fast_log",
             "full": "full_log"
         }
+    },
+    "paloalto": {
+        "parser_cls": PaloAltoParser,
+        "logType": {
+            "threat": "threat_log"
+        }
     }
 }
 
@@ -168,7 +174,7 @@ def save_logfile_state(new_state: int, sensor: str, interface: str):
         json.dump(new_file_state, s_file)
 
 
-def tail(logfile, parser, sensor_name: str, interface: str):
+def tail_file(logfile, parser, sensor_name: str, interface: str):
     # Let's figure out where we left off
     saved_file_poss = get_logfile_state()[sensor_name][interface]
     current_file_poss = 0
@@ -252,6 +258,90 @@ def tail(logfile, parser, sensor_name: str, interface: str):
         save_logfile_state(new_state=current_file_poss, sensor=sensor_name, interface=interface)
 
 
+def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
+    from pan.xapi import PanXapiError
+    pull_interval = sensor_conf.pullInterval * 60  # 2*60  # minutes
+
+    # Init PA API class
+    try:
+        palo = PA(ip=sensor_conf.ip, port=sensor_conf.port, apikey=sensor_conf.apikey)
+    except PanXapiError as msg:
+        logger.error('pan.xapi.PanXapi: %s', msg)
+        exit(1)
+    # palo = PA(**sensor_conf)
+
+    saved_seqno = get_logfile_state()[sensor_name][interface]
+
+    current_seqno = 0
+    if saved_seqno > current_seqno:
+        current_seqno = saved_seqno
+
+    logger.info(f"Sensor: {sensor_name.title()} Interface: {interface},  Alert seqNo start up:"
+                f" {current_seqno}")
+
+    _filter = "( seqno geq {current_seqno} ) and !( seqno eq {current_seqno} )"
+    # filter=f"( seqno geq 13737 ) and !( seqno eq 13737 )"
+
+    while True:
+        logger.debug(f"PA query filter '{_filter.format(current_seqno=current_seqno)}'")
+        # Query PA for logs
+        palo.log(log_type=sensor_conf.logType, nlogs=sensor_conf.nlogs, filter=_filter.format(current_seqno=current_seqno))
+        json_res = palo.query_result()
+
+        try:
+            logs = json_res["response"]["result"]["log"]["logs"]["entry"]
+        except KeyError:
+            # No new alerts..
+            logger.debug("No new logs from PA..")
+            logs = []
+
+        logger.debug(f"Total result from PA query: {len(logs)}")
+        parsed_alerts = parser(logs)
+
+        for a in parsed_alerts:
+            alert = Alert(**a)
+
+            alert.interface = interface
+
+            if not isFilter_enabled and isNotify_enabled:
+                # Notifications is enabled but we are not filtering any alert..
+                logger.debug("Sending notification..")
+
+                notify.send_notification(
+                    message=alert.__dict__, title=f"{sensor_name} Event".title()
+                )
+
+            if isFilter_enabled and not alert_filter.run_filter(alert=alert):
+                # Filter is enabled and this alert did not match any filters so we can send notification
+
+                # Add reverse DNS to src/dest
+                if isReverseDNS_enabled:
+                    # Reverse DNS is slow
+                    src_dns = get_hostname(alert.src)
+                    formatted_src = alert.src + " - " + str(src_dns)
+                    dest_dns = get_hostname(alert.dest)
+                    formatted_dest = alert.dest + " - " + str(dest_dns)
+
+                    alert.src = formatted_src
+                    alert.dest = formatted_dest
+
+                if isNotify_enabled:
+                    logger.debug("Sending notification..")
+
+                    notify.send_notification(
+                        message=alert.__dict__, title=f"{sensor_name} Event".title()
+                    )
+
+            # Update current seqno
+            current_seqno = alert.seqno  # int(a["seqno"])
+
+        # save current file state to file
+        save_logfile_state(new_state=current_seqno, sensor=sensor_name, interface=interface)
+
+        # Sleep
+        time.sleep(pull_interval)
+
+
 if __name__ == "__main__":
     logger.info("Powering up...")
 
@@ -283,10 +373,7 @@ if __name__ == "__main__":
         current[active_sensor][sensor_interface]
     except KeyError:
         # Add the new interface to state_file
-        save_logfile_state(0, active_sensor, sensor_interface)
-
-    # Open log file. This file object will stay open until KeyboardInterrupt is caught (or killed).
-    alert_file = open(enabled_sensor_cfg.filePath, "r")
+        save_logfile_state(new_state=0, sensor=active_sensor, interface=sensor_interface)
 
     # Init selected parser class and parser function
     parser_cls = parsers[enabled_sensor_cfg.sensorType]["parser_cls"]()
@@ -294,22 +381,44 @@ if __name__ == "__main__":
     # parser ->This is the same as doing Snort().full_log if snort is the enabled sensor and full_log is the function.
     parser = getattr(parser_cls, parser_func)
 
+    log_source_type = None
+
+    if enabled_sensor_cfg.logSourceType == "file":
+        log_source_type = "file"
+    else:
+        log_source_type = "http"
+
     # Catch keyboard interrupt so we can stop tail() while loop. This kills the while loop, nothing pretty about it..
     try:
-        tail(logfile=alert_file, parser=parser, sensor_name=active_sensor,
-             interface=sensor_interface)
+        if log_source_type == "file":
+            # Open log file. This file object will stay open until KeyboardInterrupt is caught (or killed).
+            alert_file = open(enabled_sensor_cfg.filePath, "r")
+            tail_file(logfile=alert_file, parser=parser, sensor_name=active_sensor,
+                      interface=sensor_interface)
+        else:
+            tail_http(parser=parser, sensor_name=active_sensor, interface=sensor_interface, sensor_conf=enabled_sensor_cfg)
+
     except KeyboardInterrupt:
         # Kill tail() while loop. KeyboardInterrupt is the real killer of tail()
         # tail_run.clear()
         logger.info("Killed tail()..")
+        if log_source_type == "file":
+            file_position = alert_file.tell()
+            alert_file.close()
+            logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
 
+            save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
+            logger.info(f"Saved current state: {file_position} (file position)")
+        else:
+            # logSourceType is HTTP
+            pass
         # Get current position in log file and clean up
-        file_position = alert_file.tell()
-        alert_file.close()
-        logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
-
-        save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
-        logger.info(f"Saved current state: {file_position} (file position)")
+        # file_position = alert_file.tell()
+        # alert_file.close()
+        # logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
+        #
+        # save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
+        # logger.info(f"Saved current state: {file_position} (file position)")
 
         if isFilter_enabled:
             logger.info("Filter stats:")
@@ -340,9 +449,10 @@ if __name__ == "__main__":
             notify.send_notification(message=msg, title="Unexpected error Event")
 
         # Try to shutdown stuff
-        # Get current position in log file and clean up
-        alert_file.close()
-        logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
+        if log_source_type == "file":
+            # Get current position in log file and clean up
+            alert_file.close()
+            logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
         # No reason to save current file state/poss since that prolly were errors occurs..
 
         if isFilter_enabled:
