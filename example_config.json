@@ -12,12 +12,14 @@
   "sensors": {
     "snort": {
       "enabled": false,
+      "logSourceType": "file",
       "filePath": "path/to/alertFile",
       "logType": "full",
       "interface": "LAN"
     },
     "suricata": {
       "enabled": false,
+      "logSourceType": "file",
       "filePath": "path/to/eve.json",
       "logType": "eve",
       "interface": "WAN"
