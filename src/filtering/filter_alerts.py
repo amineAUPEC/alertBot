@@ -236,7 +236,7 @@ class AlertFilter:
 
 def contains(value: str, field: str) -> bool:
     if value in field:
-        logger.debug("filter match func 'contains()'")
+        logger.debug(f"filter match func 'contains() for value {value} on field {field}'")
         return True
 
     logger.debug(f"no 'contains()' match for value {value} on field {field}")
@@ -246,7 +246,7 @@ AlertFilter.filter_funcs["contains"] = contains
 
 def not_contains(value: str, field: str) -> bool:
     if not (value in field):
-        logger.debug("filter match func 'not_contains()'")
+        logger.debug(f"filter match func 'not_contains()' for value {value} on field {field}")
         return True
     logger.debug(f"no 'not_contains()' match for value {value} on field {field}")
     return False
@@ -255,7 +255,7 @@ AlertFilter.filter_funcs["not contains"] = not_contains
 
 def regex_filter(compiled_pattern, field: str) -> bool:
     if compiled_pattern.search(field):
-        logger.debug("filter match func 'regex_filter()'")
+        logger.debug(f"filter match func 'regex_filter()' on field {field}")
         return True
 
     logger.debug(f"no 'regex_filter()' match for value {compiled_pattern} on field {field}")
@@ -265,7 +265,7 @@ AlertFilter.filter_funcs["regex"] = regex_filter
 
 def exactly(value: str, field: str) -> bool:
     if value == field:
-        logger.debug("filter match func 'exactly()'")
+        logger.debug(f"filter match func 'exactly()' for value {value} on field {field}")
         return True
 
     logger.debug(f"no 'exactly()' match for value {value} on field {field}")
@@ -275,7 +275,7 @@ AlertFilter.filter_funcs["exactly"] = exactly
 
 def not_exactly(value: str, field: str) -> bool:
     if value != field:
-        logger.debug("filter match func 'not_equal()'")
+        logger.debug(f"filter match func 'not_equal()' for value {value} on field {field}")
         return True
 
     logger.debug(f"no 'not_equal' match for value {value} on field {field}")
@@ -288,7 +288,7 @@ def ip_in_cidr_range(value: str, field: str) -> bool:
     # ip_in_cidr_range_filter(CIDR ex 192.168.1.0/24, ip.addr)
     try:
         if IPAddress(field) in IPNetwork(value):
-            logger.debug("filter match func 'ip_in_cidr_range()'")
+            logger.debug(f"filter match func 'ip_in_cidr_range()' for value {value} on field {field}")
             return True
     except AddrFormatError as e:
         logger.exception(msg=f"Is filter value '{value}' or field '{field}' a valid IP address?", exc_info=True)
@@ -304,13 +304,14 @@ def ip_not_in_cidr_range(value: str, field: str) -> bool:
         # ip is in CIDR aka return False
         return False
     # IP is not in CIDR aka return True
-    logger.debug("filter match func 'ip_not_in_cidr_range()'")
+    logger.debug(f"filter match func 'ip_not_in_cidr_range()' for value {value} on field {field}")
     return True
 AlertFilter.filter_funcs["ip not in cidr"] = ip_not_in_cidr_range
 
 
 def starts_with(value: str, field: str) -> bool:
     if field.startswith(value):
+        logger.debug(f"filter match func 'starts_with()' for value {value} on field {field}")
         return True
     return False
 AlertFilter.filter_funcs["startswith"] = starts_with
@@ -318,6 +319,7 @@ AlertFilter.filter_funcs["startswith"] = starts_with
 
 def ends_with(value: str, field: str) -> bool:
     if field.endswith(value):
+        logger.debug(f"filter match func 'ends_with' for value {value} on field {field}")
         return True
     return False
 AlertFilter.filter_funcs["endswith"] = ends_with
