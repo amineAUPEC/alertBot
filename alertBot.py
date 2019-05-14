@@ -286,6 +286,7 @@ def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
                 f" {current_seqno}")
 
     _filter = "( seqno geq {current_seqno} ) and !( seqno eq {current_seqno} )"
+    # ( seqno geq 30334 ) and !( seqno eq 30334 )
     # filter=f"( seqno geq 13737 ) and !( seqno eq 13737 )"
 
     while True:
@@ -302,7 +303,10 @@ def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
             logs = []
 
         logger.debug(f"Total result from PA query: {len(logs)}")
-        parsed_alerts = parser(logs)
+        # parsed_alerts = parser(logs)
+        # must sort received logs in order to 'increment' var current_seqno
+        # else we're gonna get the same alerts multiple times..
+        parsed_alerts = sorted(parser(logs), key=lambda s: s["seqno"], reverse=False)
 
         for a in parsed_alerts:
             alert = Alert(**a)
