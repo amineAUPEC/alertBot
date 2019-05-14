@@ -2,22 +2,29 @@ import logging
 import datetime
 from pan import xapi
 import xml.etree.ElementTree as etree
+from typing import List
 
 from src import config
+from src.misc.utils import url_sanitizer
+
 
 logger = logging.getLogger("alertBot.paloAlto")
 
 
 class PaloAltoParser:
+    """ Idiot class to follow the 'parser class paradigm' in the project """
+
     def __init__(self, dateformat: str = ""):
-        # Output date format - see datetime for formatting options
+        # Output date format - see datetime for formatting options. For future work..
         self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
         if dateformat:
             self._dateformat = dateformat
 
         self.isNotify_enabled = config.notify.enabled
 
-    def threat_log(self, threat_logs: list) -> list:
+    def threat_log(self, threat_logs: List[dict]) -> List[dict]:
+        """ 'parse' Palo Alto threat logs """
+
         alerts = []
 
         for alert in threat_logs:
@@ -38,23 +45,16 @@ class PaloAltoParser:
                 "category": alert['thr_category'],
                 "severity": alert['severity'],
                 "seqno": int(alert['seqno']),
+                # Below is temp work around. Dont work if src/dst dont have 'code'
                 "dstloc": alert['dstloc']['code'] if alert['dstloc']['code'].isalpha() else "rfc1918",
                 "srcloc": alert['srcloc']['code'] if alert['srcloc']['code'].isalpha() else "rfc1918"
-
             }
 
-            # *port* fields are not always there.. Ex ICMP alerts..
-            # This is resolved by setting src/dest port field default value to int(0) in Alert dataclass
-            # as well as expecting KeyError
             try:
-                new_alert["src_port"] = alert["sport"]
+                new_alert["misc"] = url_sanitizer(alert["misc"])
             except KeyError:
-                logger.debug("Alert dont contain src_port field..")
-
-            try:
-                new_alert["dest_port"] = alert["dport"]
-            except KeyError:
-                logger.debug("Alert dont contain dest_port field..")
+                # All alerts dont contain misc field..
+                logger.debug("Alert dont contain misc field..")
 
             alerts.append(new_alert)
 
@@ -63,7 +63,7 @@ class PaloAltoParser:
 
 class PA(xapi.PanXapi):
     """ PA class to wrap PanXapi results to dict/JSON
-    All functions below is stolen from pan.config.PanConfig so don't blame me for trashy code
+    All functions below is mostly stolen from pan.config.PanConfig so don't blame me for trashy code
 
     I guess this is cleaner than;
         try:
