@@ -158,6 +158,7 @@ def get_enabled_sensor():
 
 
 def get_logfile_state() -> dict:
+    """ Get log state """
     # Get last file position for log files.. 'state_file' is global
     with open(state_file, "r") as s_file:
         state = json.load(s_file)
@@ -166,6 +167,7 @@ def get_logfile_state() -> dict:
 
 
 def save_logfile_state(new_state: int, sensor: str, interface: str):
+    """ Save log state """
     # Save current file position of logfile. 'state_file' is global
     new_file_state = get_logfile_state()
     # Update file state
@@ -175,6 +177,7 @@ def save_logfile_state(new_state: int, sensor: str, interface: str):
 
 
 def tail_file(logfile, parser, sensor_name: str, interface: str):
+    """ Tail file log source """
     # Let's figure out where we left off
     saved_file_poss = get_logfile_state()[sensor_name][interface]
     current_file_poss = 0
@@ -259,6 +262,9 @@ def tail_file(logfile, parser, sensor_name: str, interface: str):
 
 
 def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
+    """ Tail http 'log source'
+        Should prolly be normalize if adding more http sources
+    """
     from pan.xapi import PanXapiError
     pull_interval = sensor_conf.pullInterval * 60  # 2*60  # minutes
 
