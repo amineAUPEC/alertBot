@@ -10,3 +10,12 @@ class IFaceNotify:
         """ Send a notification abstractmethod """
         # msg should only be str or dict
         raise NotImplemented
+
+
+class IFaceHTTPSource:
+    __metaclass__ = ABCMeta
+    """ Interface for sending notifications that all notification agents must follow """
+
+    @abstractmethod
+    def search(self):
+        raise NotImplemented
