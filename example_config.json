@@ -2,30 +2,39 @@
   "general": {
     "reverseDns": false,
     "restartOnChange": false,
-    "watchedFiles": ["config.json", "filter.json"],
+    "watchedFiles": [
+      "config.json",
+      "filter.json"
+    ],
     "watchInterval": 30
   },
   "filter": {
     "enabled": false,
     "path": "filter.json"
   },
-  "sensors": {
-    "snort": {
+  "sensors": [
+    {
+      "name": "snort",
       "enabled": false,
+      "sensorType": "snort",
       "logSourceType": "file",
       "filePath": "path/to/alertFile",
       "logType": "full",
       "interface": "LAN"
     },
-    "suricata": {
+    {
+      "name": "suricata",
       "enabled": false,
+      "sensorType": "suricata",
       "logSourceType": "file",
       "filePath": "path/to/eve.json",
       "logType": "eve",
       "interface": "WAN"
     },
-    "paloalto": {
+    {
+      "name": "paloalto",
       "enabled": false,
+      "sensorType": "paloalto",
       "logSourceType": "http",
       "ip": "",
       "port": 443,
@@ -35,30 +44,38 @@
       "pullInterval": 2,
       "nlogs": 20
     }
-  },
+  ],
   "notify": {
     "enabled": false,
     "notifyOnStartUp": false,
-    "blackListedFields": ["rev", "revision", "sid", "pri", "priority", "payload", "seqno"],
+    "blackListedFields": [
+      "rev",
+      "revision",
+      "sid",
+      "pri",
+      "priority",
+      "payload",
+      "seqno"
+    ],
     "agents": [
-            {
-                "name": "telegram",
-                "enabled": false,
-                "token": "TOKEN",
-                "chat_id": 99999999
-            },
-            {
-                "name": "discord",
-                "enabled": false,
-                "webhookUrl": "webhook url",
-                "useEmbed": false
-            },
-            {
-              "name": "webhook",
-              "enabled": false,
-              "url": "webhook url"
-            }
-        ]
+      {
+        "name": "telegram",
+        "enabled": false,
+        "token": "TOKEN",
+        "chat_id": 99999999
+      },
+      {
+        "name": "discord",
+        "enabled": false,
+        "webhookUrl": "webhook url",
+        "useEmbed": false
+      },
+      {
+        "name": "webhook",
+        "enabled": false,
+        "url": "webhook url"
+      }
+    ]
   },
   "logging": {
     "version": 1,
@@ -82,9 +99,12 @@
         "backupCount": 3
       }
     },
-    "loggers":{
+    "loggers": {
       "alertBot": {
-        "handlers": ["console", "file"],
+        "handlers": [
+          "console",
+          "file"
+        ],
         "level": "INFO"
       }
     }

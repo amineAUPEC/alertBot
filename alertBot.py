@@ -7,17 +7,28 @@ import traceback
 import time
 import threading
 
+from typing import List
+
 from src import config
-from src.parsers import Suricata, Snort, PaloAltoParser, PA
+from src.parsers import Suricata, Snort, PaloAltoParser
 from src.notify import Notification
 from src.filtering import AlertFilter
 from src.misc.utils import get_hostname
 from src.misc.restart import detect_change
 from src.abstraction.models import Alert
 
+from src.abstraction.interface import IFaceHTTPSource
+from src.abstraction.models import SensorConfig
+
 # Vars needed when 'restart' is enabled
 sys_args = sys.argv
 sys_exe = sys.executable
+
+# Locks
+get_state_lock = threading.RLock()
+save_state_lock = threading.RLock()
+notify_lock = threading.RLock()
+dns_lock = threading.RLock()
 
 # Create logger
 logging.config.dictConfig(config.logging)
@@ -135,33 +146,51 @@ parsers = {
 }
 
 
-def get_enabled_sensor():
-    """ Get the enabled sensor config """
-    enabled_count = 0
-    selected_sensor = None
-    for sensor in config.sensors:
-        if config.sensors[sensor].enabled:
-            enabled_count += 1
-            # Creates a new key "sensorType" = sensor ex snort
-            config.sensors[sensor]["sensorType"] = sensor
-            selected_sensor = config.sensors[sensor]
+# def get_enabled_sensor():
+#     """ Get the enabled sensor config """
+#     enabled_count = 0
+#     selected_sensor = None
+#     for sensor in config.sensors:
+#         if config.sensors[sensor].enabled:
+#             enabled_count += 1
+#             # Creates a new key "sensorType" = sensor ex snort
+#             config.sensors[sensor]["sensorType"] = sensor
+#             selected_sensor = config.sensors[sensor]
+#
+#     if not selected_sensor:
+#         logger.error("No sensors is enabled.. Plz enable ONE!")
+#         exit(1)
+#
+#     if enabled_count > 1:
+#         logger.error(f"{enabled_count} sensor enabled! Only one can be enabled!")
+#         exit(1)
+#
+#     return selected_sensor
 
-    if not selected_sensor:
+
+def get_enabled_sensors() -> List[SensorConfig]:
+    """ Get enabled sensors config """
+    enabled = []
+    # enabled = list(filter(lambda s: lambda sen: config.sensors[sen] if config.sensors[sen]["enabled"] else False,
+    #                       config.sensors))
+
+    for sensor in config.sensors:
+        if sensor.enabled:
+            enabled.append(SensorConfig(**sensor))
+
+    if not enabled:
         logger.error("No sensors is enabled.. Plz enable ONE!")
         exit(1)
 
-    if enabled_count > 1:
-        logger.error(f"{enabled_count} sensor enabled! Only one can be enabled!")
-        exit(1)
-
-    return selected_sensor
+    return enabled
 
 
 def get_logfile_state() -> dict:
     """ Get log state """
     # Get last file position for log files.. 'state_file' is global
-    with open(state_file, "r") as s_file:
-        state = json.load(s_file)
+    with get_state_lock:
+        with open(state_file, "r") as s_file:
+            state = json.load(s_file)
 
     return state
 
@@ -172,22 +201,23 @@ def save_logfile_state(new_state: int, sensor: str, interface: str):
     new_file_state = get_logfile_state()
     # Update file state
     new_file_state[sensor][interface] = new_state
-    with open(state_file, "w") as s_file:
-        json.dump(new_file_state, s_file)
+    with save_state_lock:
+        with open(state_file, "w") as s_file:
+            json.dump(new_file_state, s_file)
 
 
-def tail_file(logfile, parser, sensor_name: str, interface: str):
+def tail_file(logfile, parser, sensor_config: SensorConfig, run_event):
     """ Tail file log source """
     # Let's figure out where we left off
-    saved_file_poss = get_logfile_state()[sensor_name][interface]
+    saved_file_poss = get_logfile_state()[sensor_config.name][sensor_config.interface]
     current_file_poss = 0
     if saved_file_poss > current_file_poss:
         current_file_poss = saved_file_poss
-    logger.info(f"Sensor: {sensor_name.title()} Interface: {interface},  Alert file position start up:"
+    logger.info(f"Sensor: {sensor_config.name.title()} Interface: {sensor_config.interface}, Alert file position start up:"
                 f" {current_file_poss} (file position)")
 
-    while True:
-        # While loop runs as long as threding.Event() is set -> run_tail. Only used in threading
+    while run_event.is_set():
+        # While loop runs as long as threding.Event() is set
         logfile.seek(0, 2)
         if logfile.tell() < current_file_poss:
             logfile.seek(0, 0)
@@ -200,7 +230,7 @@ def tail_file(logfile, parser, sensor_name: str, interface: str):
             continue
 
         if current_file_poss < logfile.tell():
-            logger.debug(f"This is where we are at {logfile.tell()}, in file {interface}")
+            logger.debug(f"This is where we are at {logfile.tell()}, in file {sensor_config.interface}")
 
         # Lets run the new line through the parser and see whats happening before we say we have read it..
         logger.debug(line)
@@ -212,20 +242,20 @@ def tail_file(logfile, parser, sensor_name: str, interface: str):
             # Update current file state
             current_file_poss = logfile.tell()
             # Save current read position state to file
-            save_logfile_state(new_state=current_file_poss, sensor=sensor_name, interface=interface)
+            save_logfile_state(new_state=current_file_poss, sensor=sensor_config.name, interface=sensor_config.interface)
             # Jumps to 'next' while loop iterations
             continue
 
         alert = Alert(**parsed_line)
         # Add interface to alert
-        alert.interface = interface
+        alert.interface = sensor_config.interface
 
         if not isFilter_enabled and isNotify_enabled:
             # Notifications is enabled but we are not filtering any alert..
             logger.debug("Sending notification..")
 
             notify.send_notification(
-                message=alert.__dict__, title=f"{sensor_name} Event".title()
+                message=alert.__dict__, title=f"{sensor_config.name} Event".title()
             )
 
         if isFilter_enabled and not alert_filter.run_filter(alert=alert):
@@ -237,12 +267,14 @@ def tail_file(logfile, parser, sensor_name: str, interface: str):
             #     pcap_url = get_alert_pcap(alert.__dict__)
             #     alert.pcap = pcap_url
 
-            # Add reverse DNS to src/dest
+            # Add reverse DNS to src/dest. Reverse DNS is slow
             if isReverseDNS_enabled:
-                # Reverse DNS is slow
-                src_dns = get_hostname(alert.src)
+                # Needs lock
+                with dns_lock:
+                    src_dns = get_hostname(alert.src)
+                    dest_dns = get_hostname(alert.dest)
                 formatted_src = alert.src + " - " + str(src_dns)
-                dest_dns = get_hostname(alert.dest)
+
                 formatted_dest = alert.dest + " - " + str(dest_dns)
 
                 alert.src = formatted_src
@@ -252,73 +284,56 @@ def tail_file(logfile, parser, sensor_name: str, interface: str):
                 logger.debug("Sending notification..")
 
                 notify.send_notification(
-                    message=alert.__dict__, title=f"{sensor_name} Event".title()
+                    message=alert.__dict__, title=f"{sensor_config.name} Event".title()
                 )
+
+        logger.debug(alert)
 
         # Update current file state
         current_file_poss = logfile.tell()
         # save current file state to file
-        save_logfile_state(new_state=current_file_poss, sensor=sensor_name, interface=interface)
+        save_logfile_state(new_state=current_file_poss, sensor=sensor_config.name, interface=sensor_config.interface)
 
 
-def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
-    """ Tail http 'log source'
-        Should prolly be normalize if adding more http sources
-    """
-    from pan.xapi import PanXapiError
-    pull_interval = sensor_conf.pullInterval * 60  # 2*60  # minutes
+def tail_http(sensor_cls, sensor_config: SensorConfig, run_event):
+    """ Tail http 'log source' """
+    # Must be fixed when a new http log source is created..
+    pull_interval = sensor_config.pullInterval * 60  # 2*60
 
-    # Init PA API class
-    try:
-        palo = PA(ip=sensor_conf.ip, port=sensor_conf.port, apikey=sensor_conf.apikey)
-    except PanXapiError as msg:
-        logger.error('pan.xapi.PanXapi: %s', msg)
-        exit(1)
-    # palo = PA(**sensor_conf)
+    sensor_cls(sensor_config)
+    # Init sensor
+    sensor: IFaceHTTPSource = sensor_cls(sensor_config)
+    # sensor: IFaceHTTPSource = sensor_cls  # already instantiated
 
-    saved_seqno = get_logfile_state()[sensor_name][interface]
+    saved_state = get_logfile_state()[sensor_config.name][sensor_config.interface]
 
-    current_seqno = 0
-    if saved_seqno > current_seqno:
-        current_seqno = saved_seqno
+    current_state = 0
+    if saved_state > current_state:
+        current_state = saved_state
 
-    logger.info(f"Sensor: {sensor_name.title()} Interface: {interface},  Alert seqNo start up:"
-                f" {current_seqno}")
+    logger.info(f"Sensor: {sensor_config.name.title()} Interface: {sensor_config.interface},  Alert seqNo start up:"
+                f" {current_state}")
 
-    _filter = "( seqno geq {current_seqno} ) and !( seqno eq {current_seqno} )"
-    # ( seqno geq 30334 ) and !( seqno eq 30334 )
-    # filter=f"( seqno geq 13737 ) and !( seqno eq 13737 )"
-
-    while True:
-        logger.debug(f"PA query filter '{_filter.format(current_seqno=current_seqno)}'")
+    while run_event.is_set():
         # Query PA for logs
-        palo.log(log_type=sensor_conf.logType, nlogs=sensor_conf.nlogs, filter=_filter.format(current_seqno=current_seqno))
-        json_res = palo.query_result()
+        parsed_alerts = sensor.search(current_state)
 
-        try:
-            logs = json_res["response"]["result"]["log"]["logs"]["entry"]
-        except KeyError:
-            # No new alerts..
-            logger.debug("No new logs from PA..")
-            logs = []
+        logger.debug(f"Total result from query: {len(parsed_alerts)}")
 
-        logger.debug(f"Total result from PA query: {len(logs)}")
-        # parsed_alerts = parser(logs)
-        # must sort received logs in order to 'increment' var current_seqno
-        # else we're gonna get the same alerts multiple times..
-        parsed_alerts = sorted(parser(logs), key=lambda s: s["seqno"], reverse=False)
+        # Alerts left after filtering and other conditions.. Mostly so we can send all alerts at once
+        alertable_alerts = []
 
         for a in parsed_alerts:
             alert = Alert(**a)
 
-            alert.interface = interface
+            alert.interface = sensor_config.interface
 
             if not isFilter_enabled and isNotify_enabled:
                 # Notifications is enabled but we are not filtering any alert..
                 logger.debug("Sending notification..")
 
                 notify.send_notification(
-                    message=alert.__dict__, title=f"{sensor_name} Event".title()
+                    message=alert.__dict__, title=f"{sensor_config.name} Event".title()
                 )
 
             if isFilter_enabled and not alert_filter.run_filter(alert=alert):
@@ -327,7 +342,7 @@ def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
                 # Add reverse DNS to src/dest
                 if isReverseDNS_enabled:
                     # Reverse DNS is slow
-                    src_dns = get_hostname(alert.src)
+                    src_dns = get_hostname(alert.src)  # NEEDS LOCK
                     formatted_src = alert.src + " - " + str(src_dns)
                     dest_dns = get_hostname(alert.dest)
                     formatted_dest = alert.dest + " - " + str(dest_dns)
@@ -338,110 +353,155 @@ def tail_http(parser, sensor_name: str, interface: str, sensor_conf):
                 if isNotify_enabled:
                     logger.debug("Sending notification..")
 
-                    notify.send_notification(
-                        message=alert.__dict__, title=f"{sensor_name} Event".title()
-                    )
+                    # NEEDS LOCK
+                    with notify_lock:
+                        notify.send_notification(
+                            message=alert.__dict__, title=f"{sensor_config.name} Event".title()
+                        )
+
+            logger.debug(alert)
 
             # Update current seqno
-            current_seqno = alert.seqno  # int(a["seqno"])
+            # Must be fixed when a new http log source is created..
+            current_state = alert.seqno  # int(a["seqno"])
 
         # save current file state to file
-        save_logfile_state(new_state=current_seqno, sensor=sensor_name, interface=interface)
+        save_logfile_state(new_state=current_state, sensor=sensor_config.name, interface=sensor_config.interface)
 
         # Sleep
         time.sleep(pull_interval)
 
 
+running_threads = []
+run_events = []
+open_files = []
+
+http_run_event = None
+file_run_event = None
+watch_run_event = None
+
+
+def shutdown_gracefully():
+    """ Attempt a graceful shutdown """
+
+    # Kill threads if any (ex file watcher).
+    if running_threads:
+        logger.info("Killing thread(s).. You must wait their sleep time..")
+
+        for rv in run_events:
+            # Clear all run events
+            rv.clear()
+
+        for th in running_threads:
+            # Kill(join) all running threads
+            th.join()
+        logger.debug("All threads are dead")
+
+    if open_files:
+        # Close all open log files and save current position
+        for of in open_files:
+            # Get One sensor config = of["sensor"] -> Munch object
+            curr_sensor = list(filter(lambda x: x.name == of["sensor"], config.sensors))[0]
+            file_position = of["alert_file"].tell()
+            of["alert_file"].close()
+            logger.info(f"Closed logfile '{of['filePath']}'")
+
+            save_logfile_state(new_state=file_position, sensor=curr_sensor.sensorType, interface=curr_sensor.interface)
+            logger.info(f"Saved current state: {file_position} (file position)")
+
+    # Currently no reason to 'gracefully' stop tail_http threads..
+
+    if isFilter_enabled:
+        logger.info("Check alert filter stats in 'filter_stats.json'")
+        alert_filter.save_filter_stats()
+
+    logger.info("Done shutting down")
+
+
 if __name__ == "__main__":
     logger.info("Powering up...")
 
-    # tail_run determines while loop in tail() to run. Dont known how to do this another way..
-    # Only needed in a threading setup..
-    # tail_run = threading.Event()
-    # tail_run.set()
-    threads = []
-    run_event = None
+    # running_threads = []
+    # run_events = []
+    # open_files = []
+    #
+    # http_run_event = None
+    # file_run_event = None
+    # watch_run_event = None
+
     if isRestartOnChange_enabled:
         watch_interval = config.general.watchInterval  # Minutes
         watched_files = config.general.watchedFiles
-        run_event = threading.Event()
-        run_event.set()
-        th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, run_event, watch_interval,
-                                                          watched_files, alert_filter))
-        threads.append(th)
-        th.start()
+        watch_run_event = threading.Event()
+        watch_run_event.set()
 
-    # Get the enabled sensor config
-    enabled_sensor_cfg = get_enabled_sensor()
+        run_events.append(watch_run_event)
 
-    active_sensor = enabled_sensor_cfg.sensorType
-    sensor_interface = enabled_sensor_cfg.interface
+        w_th = threading.Thread(target=detect_change, args=(sys_exe, sys_args, watch_run_event, watch_interval,
+                                                            watched_files, alert_filter))
+        running_threads.append(w_th)
+        # w_th.start()
 
-    # If for some reason the sensor interface change after first run, we need to update..
-    current = get_logfile_state()
-    try:
-        current[active_sensor][sensor_interface]
-    except KeyError:
-        # Add the new interface to state_file
-        save_logfile_state(new_state=0, sensor=active_sensor, interface=sensor_interface)
+    # Get config for all enabled sensors
+    enabled_sensors = get_enabled_sensors()
 
-    # Init selected parser class and parser function
-    parser_cls = parsers[enabled_sensor_cfg.sensorType]["parser_cls"]()
-    parser_func = parsers[enabled_sensor_cfg.sensorType]["logType"][enabled_sensor_cfg.logType]
-    # parser ->This is the same as doing Snort().full_log if snort is the enabled sensor and full_log is the function.
-    parser = getattr(parser_cls, parser_func)
+    # Get save log state
+    current_logfile_state = get_logfile_state()
 
-    log_source_type = None
+    for s in enabled_sensors:
+        # If for some reason the sensor interface change after first run, we need to update..
+        try:
+            current_logfile_state[s.name][s.interface]
+        except KeyError:
+            # Add the new interface to state_file
+            save_logfile_state(new_state=0, sensor=s.sensorType, interface=s.interface)
 
-    if enabled_sensor_cfg.logSourceType == "file":
-        log_source_type = "file"
-    else:
-        log_source_type = "http"
+        # Init selected parser class and parser function
+        #parser_cls = parsers[s.sensorType]["parser_cls"](s)  # s = sensor_config
+        parser_cls = parsers[s.sensorType]["parser_cls"]  # s = sensor_config
 
-    # Catch keyboard interrupt so we can stop tail() while loop. This kills the while loop, nothing pretty about it..
-    try:
-        if log_source_type == "file":
+        if s.logSourceType == "file":
             # Open log file. This file object will stay open until KeyboardInterrupt is caught (or killed).
-            alert_file = open(enabled_sensor_cfg.filePath, "r")
-            tail_file(logfile=alert_file, parser=parser, sensor_name=active_sensor,
-                      interface=sensor_interface)
-        else:
-            tail_http(parser=parser, sensor_name=active_sensor, interface=sensor_interface, sensor_conf=enabled_sensor_cfg)
+            parser_func = parsers[s.sensorType]["logType"][s.logType]
+            # parser ->This is the same as doing Snort().full_log,
+            # if snort is the enabled sensor and full_log is the function.
+            init_parser_cls = parser_cls(s)  # Init parser_cls
+            _parser = getattr(init_parser_cls, parser_func)  # Only used for logSourceType == "file"
+            alert_file = open(s.filePath, "r")
 
+            open_files.append({"alert_file": alert_file, "filePath": s.filePath, "sensor": s.name})
+
+            # Runs forever
+            file_run_event = threading.Event()
+            file_run_event.set()
+
+            run_events.append(file_run_event)
+
+            f_th = threading.Thread(target=tail_file, args=(alert_file, _parser, s, file_run_event))
+            # tail_file(logfile=alert_file, parser=parser, sensor_name=active_sensor)
+            running_threads.append(f_th)
+            # f_th.start()
+
+        elif s.logSourceType == "http":
+            # Runs forever
+            logger.debug(s)
+            http_run_event = threading.Event()
+            http_run_event.set()
+
+            run_events.append(http_run_event)
+
+            h_th = threading.Thread(target=tail_http, args=(parser_cls, s, http_run_event))
+            running_threads.append(h_th)
+            # h_th.start()
+            # tail_http(sensor_cls=parser_cls, sensor_config=s)
+    try:
+        # Start all threads
+        for t in running_threads:
+            t.start()
     except KeyboardInterrupt:
         # Kill tail() while loop. KeyboardInterrupt is the real killer of tail()
         # tail_run.clear()
-        logger.info("Killed tail()..")
-        if log_source_type == "file":
-            file_position = alert_file.tell()
-            alert_file.close()
-            logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
-
-            save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
-            logger.info(f"Saved current state: {file_position} (file position)")
-        else:
-            # logSourceType is HTTP
-            pass
-        # Get current position in log file and clean up
-        # file_position = alert_file.tell()
-        # alert_file.close()
-        # logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
-        #
-        # save_logfile_state(new_state=file_position, sensor=active_sensor, interface=sensor_interface)
-        # logger.info(f"Saved current state: {file_position} (file position)")
-
-        if isFilter_enabled:
-            logger.info("Filter stats:")
-            logger.info("Check alert filter stats in 'filter_stats.json'")
-            alert_filter.save_filter_stats()
-
-        # Kill threads if any (ex file watcher).
-        if threads:
-            logger.info(f"Killing thread(s).. You must wait 'watchInterval' time. ({config.general.watchInterval}sec)")
-            run_event.clear()
-            for t in threads:
-                t.join(config.general.watchInterval)
-            logger.debug("All threads are dead")
+        shutdown_gracefully()
 
         logger.info("Exiting..")
         logging.shutdown()
@@ -459,24 +519,7 @@ if __name__ == "__main__":
             notify.send_notification(message=msg, title="Unexpected error Event")
 
         # Try to shutdown stuff
-        if log_source_type == "file":
-            # Get current position in log file and clean up
-            alert_file.close()
-            logger.info(f"Closed logfile '{enabled_sensor_cfg.filePath}'")
-        # No reason to save current file state/poss since that prolly were errors occurs..
-
-        if isFilter_enabled:
-            logger.info("Check alert filter stats in 'filter_stats.json'")
-            alert_filter.save_filter_stats()
-
-        # Kill threads if any (ex file watcher).
-        if threads:
-            logger.info(
-                f"Killing thread(s).. You must wait 'watchInterval' time. ({config.general.watchInterval}sec)")
-            run_event.clear()
-            for t in threads:
-                t.join(config.general.watchInterval)
-            logger.debug("All threads are dead")
+        shutdown_gracefully()
 
         logger.info("Exiting..")
         logging.shutdown()
