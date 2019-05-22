@@ -29,3 +29,29 @@ class Alert:
         rep = ", ".join(f"{field_name}='{value}'" for field_name, value in self.__dict__.items())
         return f"AlertModel({rep})"
 
+
+@dataclass
+class SensorConfig:
+    """ Model/Dataclass for sensor configs
+
+        Why? 'guaranteed' fields/attrs and intellisense
+
+    """
+    def __init__(self, name: str, enabled: bool, sensorType: str, logType: str, logSourceType: str, interface: str, **kwargs):
+        # Mandatory fields
+        self.name = name
+        self.enabled = enabled
+        self.sensorType = sensorType
+        self.logType = logType
+        self.logSourceType = logSourceType
+        self.interface = interface
+
+        # Set fields that is received in kwargs, but not mandatory. These fields do not get 'intellisense'
+        for field_name, field_value in kwargs.items():
+            self.__setattr__(field_name, field_value)
+
+    def __repr__(self):
+        # Auto generate the __repr__ with all available fields
+        rep = ", ".join(f"{field_name}='{value}'" for field_name, value in self.__dict__.items())
+        return f"SensorConfig({rep})"
+
