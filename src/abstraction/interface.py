@@ -17,5 +17,9 @@ class IFaceHTTPSource:
     """ Interface for sending notifications that all notification agents must follow """
 
     @abstractmethod
-    def search(self):
+    def __init__(self, *args, **kwargs):
+        raise NotImplemented
+
+    @abstractmethod
+    def search(self, *args):
         raise NotImplemented
