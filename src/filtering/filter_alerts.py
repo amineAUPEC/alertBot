@@ -224,7 +224,7 @@ class AlertFilter:
                 return True
 
         # Not enough filter criteria's matched.. aka this alert should not be filtered..
-        logger.debug(f"No filter matched for alert: '{alert.name}'")
+        logger.debug(f"NO MATCHING filter for alert: '{alert.name}'")
         # Log stats for how many times 'alert.name' was _NOT_ filtered
         self.not_filtered_alerts_stats[alert.name] = self.not_filtered_alerts_stats.get(alert.name, 0) + 1
 
