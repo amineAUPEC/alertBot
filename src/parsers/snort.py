@@ -2,25 +2,27 @@ import re
 import logging
 import datetime
 
-from src import config
-from src.notify import Notification
+from src.abstraction.interface import IFaceSensor
+from src.abstraction.models import SensorConfig
+from src.abstraction.exceptions import AlertLogParserError
+
 
 logger = logging.getLogger("alertBot.snort")
 
 
-class Snort:
+class Snort(IFaceSensor):
     """ Snort parser class
         Using class BC patterns should only be compiled once..
         And all snort parsers and patterns can be found at one place.
         Parsers not tested for SnortV3
     """
-    def __init__(self, datetime_format: str = ""):
+    def __init__(self, sensor_config: SensorConfig, datetime_format: str = ""):
         # Output date format - see datetime for formatting options
         self._datetime_format = "%Y-%m-%d %H:%M:%S.%f"
         if datetime_format:
             self._datetime_format = datetime_format
 
-        self.isNotify_enabled = config.notify.enabled
+        # self.isNotify_enabled = config.notify.enabled
 
         self._pattern_full = re.compile(
             r"^(?P<time>\d+\/\d+\/\d+-\d+:\d+:\d+\.\d+)\s,"
@@ -63,12 +65,13 @@ class Snort:
             if not match:
                 # Send notification when nothing matches..
                 logger.critical(f"No match for line. This should not happen! Line: %s", line)
-                if self.isNotify_enabled:
-                    Notification().send_notification(
-                        message="No match for line. This should not happen..\n{}".format(line),
-                        title="Snort full_log Parser Error"
-                    )
-                return {}
+                raise Exception(AlertLogParserError, f"No match for line. This should not happen..\n{line}")
+                # if self.isNotify_enabled:
+                #     Notification().send_notification(
+                #         message="No match for line. This should not happen..\n{}".format(line),
+                #         title="Snort full_log Parser Error"
+                #     )
+                # return {}
 
             parsed_alert = match.groupdict()
             # Format time

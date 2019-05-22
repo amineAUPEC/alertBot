@@ -3,23 +3,24 @@ import json
 import datetime
 import logging
 
-from src import config
+from src.abstraction.interface import IFaceSensor
+from src.abstraction.models import SensorConfig
+from src.abstraction.exceptions import AlertLogParserError
 from src.misc.utils import url_sanitizer
-from src.notify import Notification
 
 logger = logging.getLogger("alertBot.suricata")
 
 
-class Suricata:
+class Suricata(IFaceSensor):
     """ Suricata parser class """
 
-    def __init__(self, dateformat: str = ""):
+    def __init__(self, sensor_config: SensorConfig, dateformat: str = ""):
         # Output date format - see datetime for formatting options
         self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
         if dateformat:
             self._dateformat = dateformat
 
-        self.isNotify_enabled = config.notify.enabled
+        #self.isNotify_enabled = config.notify.enabled
 
         # Copied from snort. Needs to be checked..
         self._pattern_full = re.compile(
@@ -142,13 +143,14 @@ class Suricata:
                     logger.debug("Ignoring 'SURICATA IPv4 truncated packet' Alert! Can't match that shit")
                     return {}
                 logger.error(f"No match for line. This should not happen! Line: %s", line)
-                if self.isNotify_enabled:
-                    Notification(config.notify).send_notification(
-                        message="No match for line. This should not happen..\n{}".format(line),
-                        title="Suricata fast_log Parser Error"
-                    )
-
-                return {}
+                raise Exception(AlertLogParserError, f"No match for line. This should not happen..\n{line}")
+                # if self.isNotify_enabled:
+                #     Notification(config.notify).send_notification(
+                #         message="No match for line. This should not happen..\n{}".format(line),
+                #         title="Suricata fast_log Parser Error"
+                #     )
+                #
+                # return {}
 
             parsed_alert = match.groupdict()
 

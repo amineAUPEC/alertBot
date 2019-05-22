@@ -6,6 +6,7 @@ from typing import List
 
 from src.misc.utils import url_sanitizer
 from src.abstraction.interface import IFaceHTTPSource
+from src.abstraction.models import SensorConfig
 
 logger = logging.getLogger("alertBot.PaloAlto")
 
@@ -165,7 +166,7 @@ class PA(xapi.PanXapi):
 class PaloAltoParser(IFaceHTTPSource):
     """ Idiot class to follow the 'parser class paradigm' in the project """
 
-    def __init__(self, sensor_config: dict, dateformat: str = ""):
+    def __init__(self, sensor_config: SensorConfig, dateformat: str = ""):
 
         self.sensor_config = sensor_config
 
@@ -176,7 +177,7 @@ class PaloAltoParser(IFaceHTTPSource):
 
         # Init PA API class
         try:
-            self.palo = PA(ip=self.sensor_config["ip"], port=self.sensor_config["port"], apikey=self.sensor_config["apikey"])
+            self.palo = PA(ip=self.sensor_config.ip, port=self.sensor_config.port, apikey=self.sensor_config.apikey)
         except xapi.PanXapiError as msg:
             logger.error('pan.xapi.PanXapi: %s', msg)
             exit(1)
@@ -225,8 +226,8 @@ class PaloAltoParser(IFaceHTTPSource):
         search_filter = f"( seqno geq {seqno} ) and !( seqno eq {seqno} )"
         logger.debug(f"PA query filter '{search_filter}'")
 
-        self.palo.log(log_type=self.sensor_config["logType"],
-                      nlogs=self.sensor_config["nlogs"], filter=search_filter)
+        self.palo.log(log_type=self.sensor_config.logType,
+                      nlogs=self.sensor_config.nlogs, filter=search_filter)
 
         json_res = self.palo.query_result()
 
