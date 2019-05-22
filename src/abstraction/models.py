@@ -26,7 +26,7 @@ class Alert:
 
     def __repr__(self):
         # Auto generate the __repr__ with all available fields
-        rep = ", ".join(f"{field_name}='{value}'" for field_name, value in self.__dict__.items())
+        rep = ", ".join(f"{field_name}={repr(value)}" for field_name, value in self.__dict__.items())
         return f"AlertModel({rep})"
 
 
@@ -52,6 +52,6 @@ class SensorConfig:
 
     def __repr__(self):
         # Auto generate the __repr__ with all available fields
-        rep = ", ".join(f"{field_name}='{value}'" for field_name, value in self.__dict__.items())
+        rep = ", ".join(f"{field_name}={repr(value)}" for field_name, value in self.__dict__.items())
         return f"SensorConfig({rep})"
 
