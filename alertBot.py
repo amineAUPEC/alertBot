@@ -384,6 +384,8 @@ watch_run_event = None
 def shutdown_gracefully():
     """ Attempt a graceful shutdown """
 
+    # TODO: lookinto for better thread exit handling https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
+
     # Kill threads if any (ex file watcher).
     if running_threads:
         logger.info("Killing thread(s).. You must wait their sleep time..")
@@ -494,10 +496,13 @@ if __name__ == "__main__":
             running_threads.append(h_th)
             # h_th.start()
             # tail_http(sensor_cls=parser_cls, sensor_config=s)
-    try:
         # Start all threads
-        for t in running_threads:
-            t.start()
+    for t in running_threads:
+        t.start()
+
+    try:
+        while 1:
+            time.sleep(1)
     except KeyboardInterrupt:
         # Kill tail() while loop. KeyboardInterrupt is the real killer of tail()
         # tail_run.clear()
