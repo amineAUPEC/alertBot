@@ -4,61 +4,10 @@ from pan import xapi
 import xml.etree.ElementTree as etree
 from typing import List
 
-from src import config
 from src.misc.utils import url_sanitizer
+from src.abstraction.interface import IFaceHTTPSource
 
-
-logger = logging.getLogger("alertBot.paloAlto")
-
-
-class PaloAltoParser:
-    """ Idiot class to follow the 'parser class paradigm' in the project """
-
-    def __init__(self, dateformat: str = ""):
-        # Output date format - see datetime for formatting options. For future work..
-        self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
-        if dateformat:
-            self._dateformat = dateformat
-
-        self.isNotify_enabled = config.notify.enabled
-
-    def threat_log(self, threat_logs: List[dict]) -> List[dict]:
-        """ 'parse' Palo Alto threat logs """
-
-        alerts = []
-
-        for alert in threat_logs:
-            logger.debug(alert)
-            # print(alert)
-            new_alert = {
-                "time": datetime.datetime.strptime(alert['time_generated'],
-                                                   "%Y/%m/%d %H:%M:%S").strftime(self._dateformat),
-                "name": alert['threatid'],
-                "src": alert['src'],
-                "dest": alert['dst'],
-                "proto": alert['proto'],
-                "action": alert["action"],
-                "direction": alert["direction"],
-                "app": alert['app'],
-                "rule": alert['rule'],
-                "subtype": alert['subtype'],
-                "category": alert['thr_category'],
-                "severity": alert['severity'],
-                "seqno": int(alert['seqno']),
-                # Below is temp work around. Dont work if src/dst dont have 'code'
-                "dstloc": alert['dstloc']['code'] if alert['dstloc']['code'].isalpha() else "rfc1918",
-                "srcloc": alert['srcloc']['code'] if alert['srcloc']['code'].isalpha() else "rfc1918"
-            }
-
-            try:
-                new_alert["misc"] = url_sanitizer(alert["misc"])
-            except KeyError:
-                # All alerts dont contain misc field..
-                logger.debug("Alert dont contain misc field..")
-
-            alerts.append(new_alert)
-
-        return alerts
+logger = logging.getLogger("alertBot.PaloAlto")
 
 
 class PA(xapi.PanXapi):
@@ -211,4 +160,84 @@ class PA(xapi.PanXapi):
         # d = conf.python(xpath)
 
         return d
+
+
+class PaloAltoParser(IFaceHTTPSource):
+    """ Idiot class to follow the 'parser class paradigm' in the project """
+
+    def __init__(self, sensor_config: dict, dateformat: str = ""):
+
+        self.sensor_config = sensor_config
+
+        # Output date format - see datetime for formatting options. For future work..
+        self._dateformat = "%Y-%m-%d %H:%M:%S.%f"
+        if dateformat:
+            self._dateformat = dateformat
+
+        # Init PA API class
+        try:
+            self.palo = PA(ip=self.sensor_config["ip"], port=self.sensor_config["port"], apikey=self.sensor_config["apikey"])
+        except xapi.PanXapiError as msg:
+            logger.error('pan.xapi.PanXapi: %s', msg)
+            exit(1)
+
+    def threat_log(self, threat_logs: List[dict]) -> List[dict]:
+        """ 'parse' Palo Alto threat logs """
+
+        alerts = []
+
+        for alert in threat_logs:
+            logger.debug(alert)
+            # print(alert)
+            new_alert = {
+                "time": datetime.datetime.strptime(alert['time_generated'],
+                                                   "%Y/%m/%d %H:%M:%S").strftime(self._dateformat),
+                "name": alert['threatid'],
+                "src": alert['src'],
+                "dest": alert['dst'],
+                "proto": alert['proto'],
+                "action": alert["action"],
+                "direction": alert["direction"],
+                "app": alert['app'],
+                "rule": alert['rule'],
+                "subtype": alert['subtype'],
+                "category": alert['thr_category'],
+                "severity": alert['severity'],
+                "seqno": int(alert['seqno']),
+                # Below is temp work around. Dont work if src/dst dont have 'code'
+                "dstloc": alert['dstloc']['code'] if alert['dstloc']['code'].isalpha() else "rfc1918",
+                "srcloc": alert['srcloc']['code'] if alert['srcloc']['code'].isalpha() else "rfc1918"
+            }
+
+            try:
+                new_alert["misc"] = url_sanitizer(alert["misc"])
+            except KeyError:
+                # All alerts dont contain misc field..
+                logger.debug("Alert dont contain misc field..")
+
+            alerts.append(new_alert)
+
+        return alerts
+
+    def search(self, seqno: int) -> list:
+        """ Execute search """
+        # ( seqno geq 30334 ) and !( seqno eq 30334 )
+        search_filter = f"( seqno geq {seqno} ) and !( seqno eq {seqno} )"
+        logger.debug(f"PA query filter '{search_filter}'")
+
+        self.palo.log(log_type=self.sensor_config["logType"],
+                      nlogs=self.sensor_config["nlogs"], filter=search_filter)
+
+        json_res = self.palo.query_result()
+
+        try:
+            logs = json_res["response"]["result"]["log"]["logs"]["entry"]
+        except KeyError:
+            # No new alerts..
+            logger.debug("No new logs from PA..")
+            logs = []
+
+        # must sort received logs in order to 'increment' var current_seqno
+        # else we're gonna get the same alerts multiple times..
+        return sorted(self.threat_log(logs), key=lambda s: s["seqno"], reverse=False)
 
