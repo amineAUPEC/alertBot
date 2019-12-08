@@ -187,7 +187,15 @@ class AlertFilter:
             for rule in _filter.rules:
                 try:
                     # Mapping filter rules to actual functions and exec (value, field)
-                    if self.filter_funcs[rule.func](rule.value, alert.__dict__[rule.field]):
+                    try:
+                        should_filter: bool = self.filter_funcs[rule.func](rule.value, alert.__dict__[rule.field])
+                    except KeyError as ke:
+                        # Ignore filter fields that dont exists in *this alert*
+                        logger.debug(ke)
+                        should_filter = False
+
+                    #if self.filter_funcs[rule.func](rule.value, alert.__dict__[rule.field]):
+                    if should_filter:
                         # This specific filter rule returned true.
                         # All filters in rule->[] must be True to actually filter the alert,
                         # except if a field is used multiple times
