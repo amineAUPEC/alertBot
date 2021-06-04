@@ -37,7 +37,7 @@ Copy example config and filter
 cp example_config.json config.json
 cp example_filter.json filter.json
 ```
-Edit `config.json` and `filter.json`  
+Edit `config.json` and `filter.json`  : for instance : `vi config.json && vi filter.json`
 Active virtual environment (only when using pipenv) `pipenv shell`  
 Start bot `python alertBot.py`  
 
@@ -67,9 +67,9 @@ Nice2Know
     - blackListedFields: `[]` - List of fields. Ignored when sending notifications
     - agents
         - webhook: Posts alert as JSON (without 'filtering' fields) to a web resource
-        - discord: Supports embeds (se [Example Discord embeds message](#example-discord-embeds-message))
+        - discord: Supports embeds (see [Example Discord embeds message](#example-discord-embeds-message))
 * PcapParser
-    - Experimental. Dont enable this
+    - Experimental. Don't enable this
 ## fileState.json
 Nice2Know
 * Generated automatically
@@ -85,7 +85,7 @@ Nice2Know
     - You can also use multiple rules on the same field, but at lease one rule that uses that field has to evaluate as true v
 * Since the filter is stored in JSON format, escape chars must be escaped when regex etc is used.
     - Ex `\d+` should be `\\d+`
-* Filters is validated during initialization and errors is logged to file and console. Errors equals program dies..
+* Filters is validated during initialization and errors is logged to file and console. Errors equals program dies...
 * Supports all fields an alert generates.
 * The following filter rules is supported:
     - contains
